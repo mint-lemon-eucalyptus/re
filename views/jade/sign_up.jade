@@ -1,0 +1,32 @@
+extends layout
+
+block content
+
+    .content
+      .container
+        .page-header
+          h1 Signup
+        .row
+          .span6.offset3
+            .widget-body
+              .center-align
+                if reg_err
+                  h4.red Этот e-mail уже занят
+                form.form-horizontal.form-signin-signup(method="post", id='form-sign-up', action="sign-up-controller")
+
+                  if reg_err
+                    input(type='text', name='name', value='#{reg_email}')
+                    input(type='text', name='email', value='#{reg_name}')
+                  else
+
+                    input(class='validate[required,minSize[6]]', type='text', name='name', placeholder='Имя')
+                    input(class='validate[required,custom[email]]', type='text', name='email', placeholder='E-mail')
+                  input(class='validate[required]', type='password', id='pass', name='pass', placeholder='Придумайте пароль')
+                  input(class='validate[required,equals[pass]]', type='password', name='pass_confirm', placeholder='Подтвердите пароль')
+                  div
+                    input.btn.btn-primary.btn-large(type='submit', value='Готово')
+                h4
+                  i.icon-question-sign
+                  | Уже есть учетная запись?
+                  a.btn.btn-large.bottom-space(href='../sign_in') Вход
+

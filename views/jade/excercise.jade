@@ -1,0 +1,26 @@
+extends layout
+
+block content
+    .content
+      .container
+        .page-header
+          h1 Select queries
+        .row-fluid
+          .span4.debug
+            .ex-question.debug
+                h4 excercise #: #{excercise.id}
+                | #{excercise.question}
+            .ex-help.debug
+                h4 help articles:
+                ul
+                    - for(var i=0;i<excercise.helps.length;++i) {
+                        - var help=excercise.helps[i];
+                        li
+                            a(href='../helps/#{help.rel}') #{help.name}
+                    - }
+                | #{excercise.question}
+          .span8.debug
+            .ex-query
+                h5 query window
+                .query-inner.debug
+                    textarea#query-area

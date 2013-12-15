@@ -1,0 +1,46 @@
+extends layout
+
+block content
+    .content
+      .container
+        .page-header
+          h1 Контактная информация
+        .row-fluid
+          .span4.offset1
+            .page-header
+              h2 Связаться с нами:
+            form.form-contact-us
+              .control-group
+                .controls
+                  input(type="text", id="inputName" placeholder="Ваше имя")
+              .control-group
+                .controls
+                  input(type="text", id="inputEmail" placeholder="ваш e-mail")
+              .control-group
+                .controls
+                  textarea(id="inputMessage", placeholder="Сообщение")
+              .control-group
+                .controls
+                  input(type="submit", class="btn btn-primary, btn-large" value="Отправить")
+          .span5.offset2
+            .page-header
+              h2 наш адрес:
+            h3 Россия
+            div
+              address.pull-left
+                strong Bootbusiness, Inc.
+                br
+                |  с.Покровское
+                br
+                |  Неклиновский р-он
+                br
+                |  Ростовская область
+                br
+              .pull-right
+                .bottom-space
+                  i.icon-phone.icon-large
+                  |   8(961) 291-0229
+                a(href="mailto:contact@bootbusiness.com" class="contact-mail")
+                  i.icon-envelope.icon-large
+                |  contact@bootbusiness.com
+              .clearfix

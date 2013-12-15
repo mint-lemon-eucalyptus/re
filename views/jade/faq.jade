@@ -1,0 +1,20 @@
+extends layout
+
+block content
+    .content
+      .container
+        .page-header
+          h1 Часто задаваемые вопросы
+        .row
+          .span10.offset1
+            #faqAccordion.accordion
+            each faq in faqs
+              .accordion-group
+                .accordion-heading
+                  h4
+                    a(class="accordion-toggle" data-toggle="collapse" data-parent="#faqAccordion" href="#faq#{faq.id}")
+                      i.icon-question-sign
+                      | #{faq.question}
+                div(id="faq#{faq.id}", class="accordion-body collapse")
+                  .accordion-inner
+                    | #{faq.answer}

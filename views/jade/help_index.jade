@@ -1,0 +1,17 @@
+extends layout
+
+block content
+    .content
+      .container
+        .page-header
+          h1 Excercise index page
+        .row
+          .span10.offset1
+            #faqAccordion.accordion
+            h4 number of helps: #{helps.length}
+            - for(var i=0;i<helps.length;++i){
+              - var ex = helps[i];
+                  h4
+                    a(href="/help/#{i}")
+                      | #{ex.question}
+            - }

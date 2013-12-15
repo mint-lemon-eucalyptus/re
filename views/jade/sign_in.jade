@@ -1,0 +1,29 @@
+extends layout
+
+block content
+
+    .content
+        .container
+            .page-header
+                h1 Signin to Bootbusiness
+            .row
+                .span6.offset3
+                    h4.widget-header
+                        i.icon-lock
+                        | Signin to Bootbusiness
+                    .widget-body
+                        .center-align
+                            if error
+                                h4.red Неправильная пара логин/пароль
+                            form.form-horizontal.form-signin-signup(id='form-sign-in', action="../sign-in-controller", method="post")
+                                input(class='validate[required,custom[email]]', type='text', name='email', placeholder='Email')
+                                input(class='validate[required]', type='password', name='pass', placeholder='Password')
+                                .remember-me
+                                    .pull-right
+                                        a(href='../sign_in') Забыли пароль?
+                                    .clearfix
+                                input.btn.btn-primary.btn-large(type='submit', value='Вход')
+                            h4
+                                i.icon-question-sign
+                                |  Еще не зарегистрированы?
+                            a.btn.btn-large.bottom-space(href='../sign_up') Присоединиться

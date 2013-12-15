@@ -1,0 +1,75 @@
+doctype 5
+html
+  head
+    title= 'site title'
+    meta(charset="utf-8")
+    meta(name="author", content="green-dev")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    meta(name="description", content="Bootbusiness | Short description about company")
+    link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/bootstrap-responsive.min.css')
+    link(rel='stylesheet', href='/stylesheets/font-awesome.css')
+    link(rel='stylesheet', href='/stylesheets/font-awesome-ie7.css')
+    link(rel='stylesheet', href='/stylesheets/layout.css')
+
+  body
+    header
+      .navbar.navbar-fixed-top
+        .navbar-inner
+            .container
+              a(href="/", class="brand brand-bootbus") Home
+              button(class="btn btn-navbar", data-toggle="collapse", data-target=".nav-collapse")
+                span.icon-bar
+                span.icon-bar
+                span.icon-bar
+              .nav-collapse.collapse
+                ul.nav.pull-right
+                  li
+                    a(href="../help") Помощь
+                  li
+                    a(href="../excercises") Задачи
+                  li
+                    a(href="../articles") Статьи
+                  if !session.auth
+                    li
+                      a(href="../sign_in") Вход
+                    li
+                      a(href="../sign_up") Регистрация
+                  else
+                    li.dropdown
+                      a(href="#", class="dropdown-toggle", data-toggle="dropdown") #{cookies.n}
+                        b.caret
+                      ul.dropdown-menu
+                        li.nav-header ПРОФИЛЬ
+                        li
+                          a(href="../user/#{cookies.id}")=cookies.n
+                        li
+                          a(href="../logout") Выход
+      script(src="../javascripts/jquery.min.js")
+      script(src="../javascripts/bootstrap.min.js")
+      script(src="../javascripts/bootstrap-slider.js")
+
+    block content
+
+    footer.debug
+      .container.debug
+        .row
+          .span2
+            nav
+              ul.quick-links
+                //li
+                  i.icon-globe.icon-white
+                  a(href="#") Партнеры
+                //li
+                  i.icon-book
+                  a(href="../articles") Статьи
+          .span2
+            nav
+              ul.quick-links
+                //li
+                  i.icon-thumbs-up.icon-white
+                  a(href="faq") Помощь
+                //li
+                  i.icon-search.icon-white
+                  a(href="../contact_us") Контакты
+      block js_content
