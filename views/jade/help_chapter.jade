@@ -1,0 +1,20 @@
+extends layout
+
+block content
+    .content
+      .container
+        .page-header
+        - var chapter = chapters[active];
+          h3 #{chapter.div} #{chapter.title}
+        .row
+          .span10.offset1.chapter-content.debug
+            p !{chapter.content}
+        .row
+          h1 #{++active}
+          if(active<(chapters.length))
+            .span10.offset1.chapters-next.debug
+              //h1 #{chapter.id} #{(chapters.length)}
+              h5 Следующая статья:
+                ul
+                  li
+                    a(href='../help/#{active}') #{chapters[active].title}
