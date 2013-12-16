@@ -282,3 +282,28 @@ footer {
   width: 100%;
   margin: 0px auto;
 }
+.container>.row{
+  text-indent: 2em;
+}
+.chapter-content,.chapter-content>*{
+  text-indent: 2em;
+  text-align: justify;
+}
+.code{
+  font-weight: 900;
+}
+.comment{
+  color: darkgreen;
+}
+.syntax{
+  color: darkblue;
+}
+.warning{
+  color: darkred;
+}
+.cypher{
+  color: #000000;
+}.result{
+   font-weight: 700;
+  background-color: lightgray;
+ }

@@ -4,14 +4,14 @@ block content
     .content
       .container
         .page-header
-          h1 Excercise index page
+          h3 Справочный раздел по Neo4j
         .row
           .span10.offset1
-            #faqAccordion.accordion
-            h4 number of helps: #{helps.length}
+            ul
             - for(var i=0;i<helps.length;++i){
               - var ex = helps[i];
-                  h4
-                    a(href="/help/#{i}")
-                      | #{ex.question}
+              li
+                 h4
+                    a(href="/help/#{ex.id}")
+                      | #{ex.title}
             - }

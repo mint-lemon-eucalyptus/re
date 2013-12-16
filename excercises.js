@@ -11,16 +11,7 @@ module.exports=[
         },
         json:{
         },
-        helps:[
-            {
-                name:'simple select queries',
-                rel:'1'
-            },
-            {
-                name:'simple select queries',
-                rel:'1'
-            }
-        ],
+        helps:[0,1],
         question:'excercise question excercise question excercise question excercise question '
     }
 ];

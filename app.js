@@ -50,6 +50,7 @@ function query(q, callback) {
 }
 
 var excercises = require('./excercises.js');
+var config = require('./config.js');
 
 var helps = require('./helps.js');
 
@@ -122,6 +123,7 @@ app.use(function (req, res, next) {
  });
  */
 
+app.locals.config = config;
 
 
 // development only
@@ -169,14 +171,13 @@ app.get('/excercises', function (req, res) {
 
 app.get('/excercises/:id', function (req, res) {
 
-        res.render('excercise',{excercise:excercises[req.params.id]});
+        res.render('excercise',{chapters:helps,excercise:excercises[req.params.id]});
+
 
 });
 
 app.get('/help/:id', function (req, res) {
-
-    res.render('excercise',{excercise:excercises[req.params.id]});
-
+    res.render('help_chapter',{chapters:helps,active:req.params.id});
 });
 app.get('/help', function (req, res) {
 
