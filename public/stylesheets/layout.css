@@ -307,3 +307,12 @@ footer {
    font-weight: 700;
   background-color: lightgray;
  }
+#result_json{
+  min-height: 200px;
+  width: 95%;
+  margin: 0px auto;
+}
+ #result_json>*{
+   border: 1px green solid;
+   text-indent: 1em;
+ }

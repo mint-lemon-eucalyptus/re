@@ -5,19 +5,18 @@ html
     meta(charset="utf-8")
     meta(name="author", content="green-dev")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    meta(name="description", content="Bootbusiness | Short description about company")
     link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
     link(rel='stylesheet', href='/stylesheets/bootstrap-responsive.min.css')
     link(rel='stylesheet', href='/stylesheets/font-awesome.css')
     link(rel='stylesheet', href='/stylesheets/font-awesome-ie7.css')
-    link(rel='stylesheet', href='/stylesheets/boot-business.css')
+    link(rel='stylesheet', href='/stylesheets/layout.css')
 
   body
     header
       .navbar.navbar-fixed-top
         .navbar-inner
             .container
-              a(href="/", class="brand brand-bootbus") Bootbusiness
+              a(href="/", class="brand brand-bootbus") Home
               button(class="btn btn-navbar", data-toggle="collapse", data-target=".nav-collapse")
                 span.icon-bar
                 span.icon-bar
@@ -26,7 +25,7 @@ html
                 ul.nav.pull-right
                   li
                     a(href="../") На главную
-                  li
+                  //li
                     a(href="../contact_us") Контакты
     .content
         .container
@@ -42,7 +41,7 @@ html
             h3
               a(href="../", class="btn btn-primary") На главную
     footer
-      .container
+      //.container
         .row
           .span2
             h4
@@ -66,7 +65,7 @@ html
                   a(href="../contact_us") Контакты
       hr.footer-divider
       .container
-        p &copy; 2012-3000 Bootbusiness, Inc. All Rights Reserved.
+        //p &copy; 2012-3000 Bootbusiness, Inc. All Rights Reserved.
       script(src="../javascripts/jquery.min.js")
       script(src="../javascripts/bootstrap.min.js")
       script(src="../javascripts/boot-business.js")

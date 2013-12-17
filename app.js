@@ -3,13 +3,12 @@
  */
 
 var express = require('express');
-var user = require('./routes/user');
 var http = require('http');
 var path = require('path');
 //var pg = require('pg');
 var crypto = require('crypto');
 var nodemailer = require("nodemailer");
-var util=require('util');
+var util = require('util');
 
 var COOKIES_EXPIRE = 1000 * 60 * 60;
 
@@ -17,6 +16,23 @@ var LOCAL = true;
 var DBNAME = 'testing';
 var DBUSER = 'testing_user';
 var DBPASS = '12';
+var neo4j = require('neo4j-js');
+
+function execQuery(query_, callback) {
+    neo4j.connect('http://localhost:7474/db/data/', function (error, graph) {
+        if (error) {
+            callback({error: error,cause:'Neo4j server is not started'}, null);
+
+            return;
+        }
+        // do something with graph object
+        graph.query(query_, function (err, results) {
+            callback(null, results);
+        });
+    });
+
+
+}
 //
 //process.env.HEROKU_POSTGRESQL_YELLOW_URL
 // "postgres://evouvpryqzoccf:6Yne99-CjdKmPQoygYXqQavOFt@ec2-54-221-196-140.compute-1.amazonaws.com:5432/ddmrsd6pq9j7sa"
@@ -133,7 +149,7 @@ if ('development' == app.get('env')) {
 
 
 app.get('/', function (req, res) {
- //   console.log(util.inspect(req))
+    //   console.log(util.inspect(req))
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
     var n = req.cookies.n;  //username
@@ -166,25 +182,47 @@ app.get('/', function (req, res) {
 });
 
 app.get('/excercises', function (req, res) {
-        res.render('excercises',{excercises:excercises});
+    res.render('excercises', {excercises: excercises});
 });
 
 app.get('/excercises/:id', function (req, res) {
+    if (excercises[req.params.id]) {
+        res.cookie('exNum', req.params.id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+        res.render('excercise', {chapters: helps, excercise: excercises[req.params.id]});
+    } else {
+        res.render('excercises', {excercises: excercises});
 
-        res.render('excercise',{chapters:helps,excercise:excercises[req.params.id]});
-
-
+    }
 });
 
+
+//login
+app.post('/ex-check', function (req, res) {
+    var query = req.body.query;
+    console.log(query)
+    execQuery(query, function (err, results) {
+        if (err) {
+            res.send(
+                {
+                    err: err
+                });
+        }
+        else {
+            res.send({results: results})
+        }
+    })
+})
+;
+
+
 app.get('/help/:id', function (req, res) {
-    res.render('help_chapter',{chapters:helps,active:req.params.id});
+    res.render('help_chapter', {chapters: helps, active: req.params.id});
 });
 app.get('/help', function (req, res) {
 
-    res.render('help_index',{helps:helps});
+    res.render('help_index', {helps: helps});
 
 });
-
 
 
 //login
@@ -252,7 +290,7 @@ app.post('/sign-up-controller', function (req, res) {
 
                 smtpTransport.sendMail(mailOptions, function (error, response) {
                     if (error) {
-                        console.log('SMTP>>:',error,'\n\t\t',post.to);
+                        console.log('SMTP>>:', error, '\n\t\t', post.to);
                     } else {
                         console.log("Message sent: " + response.message);
                     }
@@ -286,17 +324,6 @@ app.post('/sign-in-controller', function (req, res) {
             res.redirect('/');
         }
     );
-});
-
-app.get('/faq', function (req, res) {
-    var bean = {
-        session: req.session
-    };
-    res.render('faq');
-});
-
-app.get('/articles', function (req, res) {
-    res.render('articles');
 });
 
 app.get('/logout', function (req, res) {
@@ -348,8 +375,6 @@ app.get('/db_view', db_view);
 app.get('/env', function (req, res) {
     res.send(process.env)
 });
-
-app.get('/user/:id', user.byId);
 
 
 /*
