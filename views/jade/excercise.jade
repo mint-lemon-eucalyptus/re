@@ -1,6 +1,8 @@
 extends layout
 
 block content
+    script(src="../javascripts/lib.js")
+
     .content
       .container
         .page-header
@@ -29,29 +31,43 @@ block content
             //svg#correct_svg.debug
           .span6.debug
             h4 Результат выполнения запроса:
-            //svg#result_svg.debug
+            svg#result_svg.debug
             textarea#result_json(autofocus)
 
     script(type='text/javascript').
       var queryArea, resultSvg, resultDiv;
-      var counter=0;
+      var graph = Morph.Graph.graph();
+      var svg = document.getElementById('result_svg')
+      var renderer = Morph.Graph.View.renderer(graph, {
+                  container: svg,
+                  nodeSize: 30,
+                  nodeColor: '#8abc4e',
+                  linkColor: '#f00'
+                });
+
       function formatJSONString(inp){
         return inp//.replace("{","<p>{").replace("}","}</p>");
       }
+
       function sendQuery(){
           console.log(queryArea.val());
-          ++counter;
           $.post( "../ex-check", { query: queryArea.val()})
             .done(function( data ) {
               console.log( "Data Loaded: ", data );
               resultDiv.val(JSON.stringify(data,null,4));
+              graph.clear();
+              graph.fromJSON(data.results);
+              renderer.run();
+              //graph.log();
             });
       }
+
       $(document).ready(function () {
         queryArea=$('#query-area');
         resultSvg=$('#result_svg');
         resultDiv=$('#result_json');
-        queryArea.focus();
+
+
         $('#query-area').keydown(function (e) {
 
           if (e.ctrlKey && e.keyCode == 13) {
@@ -59,4 +75,5 @@ block content
             sendQuery();
           }
         });
+        queryArea.focus();
       });
