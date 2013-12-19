@@ -1,12 +1,9 @@
 var Morph = Morph || {};
 
 Morph.Graph = Morph.Graph || {};
-Morph.svgns = 'http://www.w3.org/2000/svg';
-Morph.xlinkns = 'http://www.w3.org/1999/xlink';
+Morph.svgns = "http://www.w3.org/2000/svg";
+Morph.xlinkns = "http://www.w3.org/1999/xlink";
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Morph;
-}
 Morph.Graph.version = '0.4.1';
 Morph.lazyExtend = function (target, options) {
     var key;
@@ -421,6 +418,33 @@ Morph.Graph.Utils.dragndrop = function (element) {
         }
     };
 };
+Morph.Graph.Utils.mouseover = function (node) {
+    var start, end,
+        documentEvents = Morph.Graph.Utils.events(window.document),
+        elementEvents = Morph.Graph.Utils.events(node.ui),
+
+        handleMouseOver = function (e) {
+            e = e || window.event;
+            var elem = e.toElement;
+            console.log('mouseover',node);
+        }
+
+    elementEvents.on('mouseover', handleMouseOver);
+
+    return {
+        onStart: function (callback) {
+            start = callback;
+            return this;
+        },
+        onStop: function (callback) {
+            end = callback;
+            return this;
+        },
+        release: function () {
+            documentEvents.stop('mouseover', handleMouseOver);
+        }
+    };
+};
 
 Morph.Input = Morph.Input || {};
 Morph.Input.domInputManager = function () {
@@ -430,6 +454,20 @@ Morph.Input.domInputManager = function () {
                 var events = Morph.Graph.Utils.dragndrop(node.ui);
                 events.onStart(handlers.onStart);
                 events.onDrag(handlers.onDrag);
+                events.onStop(handlers.onStop);
+
+                node.events = events;
+            } else if (node.events) {
+                node.events.release();
+                node.events = null;
+                delete node.events;
+            }
+        },
+        bindHover: function (node, handlers) {
+            if (handlers) {
+                console.log(node.ui)
+                var events = Morph.Graph.Utils.mouseover(node);
+                events.onStart(handlers.onStart);
                 events.onStop(handlers.onStop);
 
                 node.events = events;
@@ -531,29 +569,22 @@ Morph.Graph.Node = function (id) {
     this.data = null;
 };
 
-Morph.Graph.Link = function (fromId, toId, data) {
+Morph.Graph.Link = function (fromId, toId, id, data) {
     this.fromId = fromId;
     this.toId = toId;
     this.data = data;
+    this.id = id;
 };
 Morph.Graph.graph = function () {
-
+    var gr = this;
     var nodes = {},
         links = [],
         nodesCount = 0,
-        suspendEvents = 0,
         changes = [],
 
-        enterModification = function () {
-            suspendEvents += 1;
-        },
-
         exitModification = function (graph) {
-            suspendEvents -= 1;
-            if (suspendEvents === 0 && changes.length > 0) {
-                graph.emit('changed', changes);
-                changes.length = 0;
-            }
+            graph.emit('changed', changes);
+            changes.length = 0;
         },
 
         recordLinkChange = function (link, changeType) {
@@ -569,9 +600,7 @@ Morph.Graph.graph = function () {
 
     var graphPart = {
         addNode: function (nodeId, data) {
-            enterModification();
             var node = this.getNode(nodeId);
-            console.log(node,nodeId)
             if (!node) {
                 node = new Morph.Graph.Node(nodeId);
                 nodesCount++;
@@ -598,37 +627,33 @@ Morph.Graph.graph = function () {
                         }
                     }
                 }
+
                 node.data = augmentedData;
             }
+
             nodes[nodeId] = node;
+
             exitModification(this);
             return node;
         },
 
 
-        addLink: function (fromId, toId, data) {
-            enterModification();
-
+        addLink: function (fromId, toId, id, data) {
             var fromNode = this.getNode(fromId) || this.addNode(fromId);
             var toNode = this.getNode(toId) || this.addNode(toId);
             data.weight = data.weight | 1.0;
+            var link = new Morph.Graph.Link(fromId, toId, id, data);
 
-            var link = this.getLink(fromId, toId);
-//            console.log(fromId, toId, link);
-            if (!link) {
-                link = new Morph.Graph.Link(fromId, toId, data);
+            links.push(link);
 
-                links.push(link);
+            fromNode.links.push(link);
+            toNode.links.push(link);
 
-                fromNode.links.push(link);
-                toNode.links.push(link);
+            recordLinkChange(link, 'add');
 
-                recordLinkChange(link, 'add');
+            exitModification(this);
 
-                exitModification(this);
-
-                return link;
-            }
+            return link;
         },
 
 
@@ -640,8 +665,6 @@ Morph.Graph.graph = function () {
             if (idx < 0) {
                 return false;
             }
-
-            enterModification();
 
             links.splice(idx, 1);
 
@@ -674,7 +697,6 @@ Morph.Graph.graph = function () {
             if (!node) {
                 return false;
             }
-            enterModification();
             while (node.links.length) {
                 var link = node.links[0];
                 this.removeLink(link);
@@ -685,24 +707,11 @@ Morph.Graph.graph = function () {
             changes.push({node: node, changeType: 'remove'});
             exitModification(this);
         },
-
-
         getNode: function (nodeId) {
             return nodes[nodeId];
         },
-        getLink: function (from, to) {
-            for (var i = 0; i < links.length; ++i) {
-                if (links[i].fromId == from && links[i].toId == to) {
-                    return links[i];
-                }
-            }
-            return null;
-        },
         getNodesCount: function () {
             return nodesCount;
-        },
-        getLinksCount: function () {
-            return links.length;
         },
         getLinks: function (nodeId) {
             var node = this.getNode(nodeId);
@@ -716,58 +725,24 @@ Morph.Graph.graph = function () {
                 }
             }
         },
-        forEachLinkedNode: function (nodeId, callback, oriented) {
-            var node = this.getNode(nodeId),
-                i,
-                link,
-                linkedNodeId;
-
-            if (node && node.links && typeof callback === 'function') {
-                if (oriented) {
-                    for (i = 0; i < node.links.length; ++i) {
-                        link = node.links[i];
-                        if (link.fromId === nodeId) {
-                            callback(nodes[link.toId], link);
-                        }
-                    }
-                } else {
-                    for (i = 0; i < node.links.length; ++i) {
-                        link = node.links[i];
-                        linkedNodeId = link.fromId === nodeId ? link.toId : link.fromId;
-
-                        callback(nodes[linkedNodeId], link);
-                    }
-                }
-            }
-        },
-
         forEachLink: function (callback) {
-            var i;
-            for (i = 0; i < links.length; ++i) {
+            for (var i = 0; i < links.length; ++i) {
                 callback(links[i]);
             }
         },
-        beginUpdate: function () {
-            enterModification();
-        },
-        endUpdate: function () {
-            exitModification(this);
-        },
         clear: function () {
             var that = this;
-            that.beginUpdate();
             that.forEachNode(function (node) {
                 that.removeNode(node.id);
             });
-            that.endUpdate();
-        },
-        fromJSON: function (json) {
-            //    console.log(json);
+            exitModification(that);
+        }, fromJSON: function (json) {
+            graphPart.clear();
             var r = 0, n = 0;
             for (var i = 0; i < json.length; ++i) {
                 for (var el in json[i]) {
                     if (json[i][el].start) {
-                        graphPart.addLink(json[i][el].start, json[i][el].end, json[i][el].data, json[i][el].type);
+                        graphPart.addLink(json[i][el].start, json[i][el].end, json[i][el].id, json[i][el].data, json[i][el].type);
                         ++r;
                     } else {
                         graphPart.addNode(json[i][el].id, json[i][el].data);
@@ -775,17 +750,16 @@ Morph.Graph.graph = function () {
                     }
                 }
             }
-        },
-        log: function () {
-            console.log(nodes.length, links);
-        }
 
-    };
+        }
+    }
+
 
     Morph.Graph.Utils.events(graphPart).extend();
 
     return graphPart;
-};
+}
+;
 
 Morph.Graph.Physics = Morph.Graph.Physics || {};
 
@@ -839,6 +813,16 @@ Morph.Graph.Physics.Spring = function (body1, body2, length, coeff, weight) {
     this.weight = weight;
 };
 
+Morph.Graph.Physics.QuadTreeNode = function () {
+    this.centerOfMass = new Morph.Graph.Physics.Point();
+    this.children = [];
+    this.body = null;
+    this.hasChildren = false;
+    this.x1 = 0;
+    this.y1 = 0;
+    this.x2 = 0;
+    this.y2 = 0;
+};
 Morph.Graph.Physics = Morph.Graph.Physics || {};
 
 Morph.Graph.Physics.eulerIntegrator = function () {
@@ -1624,7 +1608,7 @@ Morph.Graph.Layout.forceDirected = function (graph, settings) {
 };
 Morph.Graph.View = Morph.Graph.View || {};
 
-Morph.Graph.View.renderer = function (graph, settings) {
+Morph.Graph.View.Renderer = function (graph, settings) {
     var FRAME_INTERVAL = 30;
 
     settings = settings || {};
@@ -1634,6 +1618,7 @@ Morph.Graph.View.renderer = function (graph, settings) {
         container = settings.container,
         inputManager,
         animationTimer,
+        rendererInitialized = false,
         updateCenterRequired = true,
 
         currentStep = 0,
@@ -1728,6 +1713,7 @@ Morph.Graph.View.renderer = function (graph, settings) {
             animationTimer.restart();
         },
 
+
         updateCenter = function () {
             var graphRect = layout.getGraphRect(),
                 containerSize = Morph.Graph.Utils.getDimension(container);
@@ -1744,6 +1730,7 @@ Morph.Graph.View.renderer = function (graph, settings) {
             var nodeUI = graphics.node(node);
             node.ui = nodeUI;
             graphics.initNode(nodeUI);
+            renderNode(node);
         },
 
         removeNodeUi = function (node) {
@@ -1756,6 +1743,7 @@ Morph.Graph.View.renderer = function (graph, settings) {
             var linkUI = graphics.link(link);
             link.ui = linkUI;
             graphics.initLink(linkUI);
+            renderLink(link);
         },
 
         removeLinkUi = function (link) {
@@ -1788,15 +1776,23 @@ Morph.Graph.View.renderer = function (graph, settings) {
                     userInteraction = false;
                 }
             });
+            inputManager.bindHover(node, {
+                onStart: function () {
+console.log('onstart')
+                },
+                onStop: function () {
+                    console.log('onstop')
+                }
+            });
         },
 
         releaseNodeEvents = function (node) {
             inputManager.bindDragNDrop(node, null);
+            inputManager.bindHover(node, null);
         },
 
         initDom = function () {
             graphics.init(container);
-            //   graph.forEachNode(function(a){console.log(a)});
 
             graph.forEachNode(createNodeUi);
 
@@ -1902,6 +1898,7 @@ Morph.Graph.View.renderer = function (graph, settings) {
         },
 
         stopListenToEvents = function () {
+            rendererInitialized = false;
             releaseGraphEvents();
             releaseContainerDragManager();
             windowEvents.stop('resize', onWindowResized);
@@ -1923,11 +1920,17 @@ Morph.Graph.View.renderer = function (graph, settings) {
 
     return {
         run: function (iterationsCount) {
-            prepareSettings();
-            updateCenter();
-            initDom();
-            console.log('n', graph.getNodesCount(), 'l', graph.getLinksCount())
-            listenToEvents();
+
+            if (!rendererInitialized) {
+                prepareSettings();
+
+                updateCenter();
+                initDom();
+                listenToEvents();
+
+                rendererInitialized = true;
+            }
+
             renderIterations(iterationsCount);
 
             return this;
@@ -1939,6 +1942,14 @@ Morph.Graph.View.renderer = function (graph, settings) {
             transform.scale = 1;
         },
 
+        pause: function () {
+            animationTimer.stop();
+        },
+
+        resume: function () {
+            animationTimer.restart();
+        },
+
         dispose: function () {
             stopListenToEvents();
         },
@@ -1946,12 +1957,18 @@ Morph.Graph.View.renderer = function (graph, settings) {
         on: function (eventName, callback) {
             publicEvents.addEventListener(eventName, callback);
             return this;
+        },
+
+        off: function (eventName, callback) {
+            publicEvents.removeEventListener(eventName, callback);
+            return this;
         }
     };
 };
 
 
 Morph.Graph.svg = function (element) {
+
     var svgElement = element;
 
     svgElement = window.document.createElementNS(Morph.svgns, element);
@@ -1988,6 +2005,7 @@ Morph.Graph.svg = function (element) {
     };
 
     svgElement.link = function (target) {
+        console.log(target)
         if (arguments.length) {
             svgElement.setAttributeNS(Morph.xlinkns, "xlink:href", target);
             return svgElement;
@@ -2032,6 +2050,7 @@ Morph.Graph.svg = function (element) {
                     } else if (tagSelector && tagName === selector) {
                         wrappedChildren.push(Morph.Graph.svg(el));
                     }
+
                     wrappedChildren = wrappedChildren.concat(Morph.Graph.svg(el).children(selector));
                 }
             }
@@ -2059,20 +2078,25 @@ Morph.Graph.View.svgGraphics = function (g, opts) {
         linkMaxWidth = opts.linkMaxWidth | 1;
     var nodeColor = (opts.nodeColor == null) ? "#00a2e8" : opts.nodeColor;
     var linkColor = (opts.linkColor == null) ? "#999" : opts.linkColor;
-    nodeBuilder = function () {
+    nodeBuilder = function (node) {
+        //console.log('node', node.id)
         return Morph.Graph.svg("rect")
             .attr("width", nodeSize)
             .attr("height", nodeSize)
+            .attr("id", 'r' + node.id)
             .attr("fill", nodeColor);
     },
+
         nodePositionCallback = function (nodeUI, pos) {
             nodeUI.attr("x", pos.x - nodeSize / 2)
                 .attr("y", pos.y - nodeSize / 2);
         },
 
         linkBuilder = function (link) {
+//            console.log('link', link)
             return Morph.Graph.svg("line")
                 .attr("stroke", linkColor)
+                .attr("id", 'l' + link.id)
                 .attr('stroke-width', link.data.weight * linkMaxWidth);
         },
 
@@ -2081,6 +2105,9 @@ Morph.Graph.View.svgGraphics = function (g, opts) {
                 .attr("x2", toPos.x).attr("y2", toPos.y);
         },
 
+        fireRescaled = function (graphics) {
+            graphics.emit("rescaled");
+        },
 
         updateTransform = function () {
             if (svgContainer) {
@@ -2106,16 +2133,6 @@ Morph.Graph.View.svgGraphics = function (g, opts) {
             }
 
             linkBuilder = builderCallbackOrLink;
-            return this;
-        },
-
-        placeNode: function (newPlaceCallback) {
-            nodePositionCallback = newPlaceCallback;
-            return this;
-        },
-
-        placeLink: function (newPlaceLinkCallback) {
-            linkPositionCallback = newPlaceLinkCallback;
             return this;
         },
 
@@ -2167,7 +2184,7 @@ Morph.Graph.View.svgGraphics = function (g, opts) {
             graphics.emit("rescaled");
             return this;
         },
-        init: function (container) {
+        init: function () {
             svgContainer = Morph.Graph.svg("g")
                 .attr("buffered-rendering", "dynamic");
             svgRoot.appendChild(svgContainer);

@@ -37,8 +37,8 @@ block content
     script(type='text/javascript').
       var queryArea, resultSvg, resultDiv;
       var graph = Morph.Graph.graph();
-      var svg = document.getElementById('result_svg')
-      var renderer = Morph.Graph.View.renderer(graph, {
+      var svg = document.getElementById('result_svg');
+      var renderer = Morph.Graph.View.Renderer(graph, {
                   container: svg,
                   nodeSize: 30,
                   nodeColor: '#8abc4e',
@@ -55,9 +55,9 @@ block content
             .done(function( data ) {
               console.log( "Data Loaded: ", data );
               resultDiv.val(JSON.stringify(data,null,4));
-              graph.clear();
               graph.fromJSON(data.results);
               renderer.run();
+              queryArea.val("MATCH (a) RETURN a LIMIT 3");
               //graph.log();
             });
       }
