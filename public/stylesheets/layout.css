@@ -316,3 +316,9 @@ footer {
    border: 1px green solid;
    text-indent: 1em;
  }
+
+ #modal.svg_modal{
+   width: 100px;
+   height: 100px;
+   background-color: red;
+ }

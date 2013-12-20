@@ -418,7 +418,9 @@ Morph.Graph.Utils.dragndrop = function (element) {
         }
     };
 };
-Morph.Graph.Utils.mouseover = function (node) {
+
+
+Morph.Graph.Utils.mouseover = function (node,modal) {
     var start, end,
         documentEvents = Morph.Graph.Utils.events(window.document),
         elementEvents = Morph.Graph.Utils.events(node.ui),
@@ -427,7 +429,9 @@ Morph.Graph.Utils.mouseover = function (node) {
             e = e || window.event;
             var elem = e.toElement;
             console.log('mouseover',node);
+            modal.textContent=JSON.stringify(node.data)
         }
+
 
     elementEvents.on('mouseover', handleMouseOver);
 
@@ -463,10 +467,10 @@ Morph.Input.domInputManager = function () {
                 delete node.events;
             }
         },
-        bindHover: function (node, handlers) {
+        bindHover: function (node, handlers,modal) {
             if (handlers) {
-                console.log(node.ui)
-                var events = Morph.Graph.Utils.mouseover(node);
+//                console.log(node.ui)
+                var events = Morph.Graph.Utils.mouseover(node,modal);
                 events.onStart(handlers.onStart);
                 events.onStop(handlers.onStop);
 
@@ -1625,6 +1629,7 @@ Morph.Graph.View.Renderer = function (graph, settings) {
         totalIterationsCount = 0,
         isStable = false,
         userInteraction = false,
+        modal=document.createElement('div'),
 
         viewPortOffset = {
             x: 0,
@@ -1642,7 +1647,9 @@ Morph.Graph.View.Renderer = function (graph, settings) {
             layout = layout || Morph.Graph.Layout.forceDirected(graph);
 //      console.log(settings)
             graphics = graphics || Morph.Graph.View.svgGraphics(graph, settings);
-
+            modal.setAttribute('id','modal')
+                modal.setAttribute('class','svg_modal');
+            container.parentNode.appendChild(modal);
 
             settings.prerender = settings.prerender || 0;
             inputManager = (graphics.inputManager || Morph.Input.domInputManager)(graph, graphics);
@@ -1783,7 +1790,7 @@ console.log('onstart')
                 onStop: function () {
                     console.log('onstop')
                 }
-            });
+            },modal);
         },
 
         releaseNodeEvents = function (node) {
