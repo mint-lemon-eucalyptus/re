@@ -36,9 +36,8 @@ block content
             .row
               svg#result_svg.debug
               textarea#result_json(autofocus)
-    .modal(id='result-modal', tabindex='-1', role='dialog')
+    .modal.hide(id='result-modal', tabindex='-1', role='dialog')
                     .modal-header
-                      button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
                       h4 Id:
                     .modal-body
                       table
@@ -53,19 +52,25 @@ block content
       var svg = document.getElementById('result_svg');
       var modal = $('#result-modal');
       var modalHeader = $('#result-modal>.modal-header>h4');
-      var modalTable = $('#result-modal>.modal-body>table>tbody');
+      var modalTable = $('#result-modal>.modal-body>table');
       function fillNodeInfo(node){
               modalHeader.text('Id: '+node.id);
-              function addProp(prop,val){
-                modalTable.append('<tr><td>'+prop+'</td><td>'+val+'</td></tr>');
 
-              }
               modalTable.empty();
               var counter=0;
+              var width = 100;
               for(var prop in node.data){
-              addProp(prop,node.data[prop]);
-              ++counter;
-                console.log(node.id,counter);
+                ++counter;
+                modalTable.append('<tr><td>'+prop+'</td><td>'+node.data[prop]+'</td></tr>');
+                var temp=prop.length+node.data[prop].length;
+                if(temp>width){
+                width=temp*2;
+                }
+              }
+                console.log(width);
+                modal.css('width',3*width+'px');
+              if(counter==0){
+                modalTable.append('<tr><td>selected node has no properties</td></tr>');
               }
       }
       var renderer = Morph.Graph.View.Renderer(graph, {
@@ -77,13 +82,10 @@ block content
                   $('#result-modal').show({
                                          handle: ".modal-header"
                                      });
-                                     fillNodeInfo(node);
+                    fillNodeInfo(node);
                   }
                 });
 
-      function formatJSONString(inp){
-        return inp//.replace("{","<p>{").replace("}","}</p>");
-      }
 
       function sendQuery(){
           console.log(queryArea.val());

@@ -331,38 +331,44 @@ footer {
 .ddb {
   border: 1px green solid;
 }
-.user-test>*{
+
+.user-test>* {
   position: relative;
 }
+
 #result_svg, #result_svg>* {
   z-index: 100;
-background-color: rgba(124, 141, 242, 0.26);
+  background-color: rgba(124, 141, 242, 0.26);
 }
 
 #result-modal {
   border-radius: 5px;
   position: fixed;
-  top:300px;
-  left: 100%;
-  right: 20px;
+  top: 300px;
+  left: 30%;
+  right: 500px;
   height: 200px;
   background-color: rgba(27, 39, 169, 0.21);
   padding: .7em;
   text-indent: .3em;
   width: 200px;
 }
-.span6>h4 {
-  text-indent: 1em;
+.span6>h4{
+  text-indent: 2em;
+}
+td {
+  border: 1px #304067 solid;
+
 }
 
-#m-props {
-  color: #000000;
+td:nth-child(1) {
+  color: #044c27;
 }
 
-#m-head {
-  color: #00008B;
+td:nth-child(2) {
+  color: #a10a30;
 }
-td.prop,td.val{
-  width: 40%;
-  border: 1px #000000 solid;
+
+#result-modal th {
+  width: 60%;
 }
