@@ -418,18 +418,22 @@ Morph.Graph.Utils.dragndrop = function (element) {
         }
     };
 };
+Morph.Graph.Utils.formatNodeInfo = function (node) {
+    var res = JSON.stringify(node.data);
 
+    return res;
+}
 
-Morph.Graph.Utils.mouseover = function (node,modal) {
+Morph.Graph.Utils.mouseover = function (node, callback) {
     var start, end,
         documentEvents = Morph.Graph.Utils.events(window.document),
         elementEvents = Morph.Graph.Utils.events(node.ui),
 
         handleMouseOver = function (e) {
             e = e || window.event;
-            var elem = e.toElement;
-            console.log('mouseover',node);
-            modal.textContent=JSON.stringify(node.data)
+            if (callback) {
+                callback(node);
+            }
         }
 
 
@@ -448,7 +452,8 @@ Morph.Graph.Utils.mouseover = function (node,modal) {
             documentEvents.stop('mouseover', handleMouseOver);
         }
     };
-};
+}
+;
 
 Morph.Input = Morph.Input || {};
 Morph.Input.domInputManager = function () {
@@ -467,10 +472,10 @@ Morph.Input.domInputManager = function () {
                 delete node.events;
             }
         },
-        bindHover: function (node, handlers,modal) {
+        bindHover: function (node, handlers, callback) {
             if (handlers) {
 //                console.log(node.ui)
-                var events = Morph.Graph.Utils.mouseover(node,modal);
+                var events = Morph.Graph.Utils.mouseover(node, callback);
                 events.onStart(handlers.onStart);
                 events.onStop(handlers.onStop);
 
@@ -1617,8 +1622,10 @@ Morph.Graph.View.Renderer = function (graph, settings) {
 
     settings = settings || {};
 
+    var renderer = this;
     var layout = settings.layout,
         graphics = settings.graphics,
+        onNodeHover = settings.onNodeClick,
         container = settings.container,
         inputManager,
         animationTimer,
@@ -1628,8 +1635,7 @@ Morph.Graph.View.Renderer = function (graph, settings) {
         currentStep = 0,
         totalIterationsCount = 0,
         isStable = false,
-        userInteraction = false,
-        modal=document.createElement('div'),
+
 
         viewPortOffset = {
             x: 0,
@@ -1642,14 +1648,13 @@ Morph.Graph.View.Renderer = function (graph, settings) {
             scale: 1
         };
 
+
     var prepareSettings = function () {
             container = container || window.document.body;
             layout = layout || Morph.Graph.Layout.forceDirected(graph);
 //      console.log(settings)
             graphics = graphics || Morph.Graph.View.svgGraphics(graph, settings);
-            modal.setAttribute('id','modal')
-                modal.setAttribute('class','svg_modal');
-            container.parentNode.appendChild(modal);
+
 
             settings.prerender = settings.prerender || 0;
             inputManager = (graphics.inputManager || Morph.Input.domInputManager)(graph, graphics);
@@ -1785,12 +1790,12 @@ Morph.Graph.View.Renderer = function (graph, settings) {
             });
             inputManager.bindHover(node, {
                 onStart: function () {
-console.log('onstart')
+                    console.log('onstart')
                 },
                 onStop: function () {
                     console.log('onstop')
                 }
-            },modal);
+            }, onNodeHover);
         },
 
         releaseNodeEvents = function (node) {

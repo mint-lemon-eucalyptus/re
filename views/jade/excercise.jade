@@ -29,20 +29,56 @@ block content
           .span6.debug
             h4 Правильный ответ:
             //svg#correct_svg.debug
-          .span6.debug
-            h4 Результат выполнения запроса:
-            svg#result_svg.debug
-            textarea#result_json(autofocus)
+          .span6.user-test.debug
+            .row.debug
+              .span6.ddb
+                h4 Результат запроса:
+            .row
+              svg#result_svg.debug
+              textarea#result_json(autofocus)
+    .modal(id='result-modal', tabindex='-1', role='dialog')
+                    .modal-header
+                      button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+                      h4 Id:
+                    .modal-body
+                      table
+                        th
+                          td Property
+                          td Value
+                        tbody
 
     script(type='text/javascript').
       var queryArea, resultSvg, resultDiv;
       var graph = Morph.Graph.graph();
       var svg = document.getElementById('result_svg');
+      var modal = $('#result-modal');
+      var modalHeader = $('#result-modal>.modal-header>h4');
+      var modalTable = $('#result-modal>.modal-body>table>tbody');
+      function fillNodeInfo(node){
+              modalHeader.text('Id: '+node.id);
+              function addProp(prop,val){
+                modalTable.append('<tr><td>'+prop+'</td><td>'+val+'</td></tr>');
+
+              }
+              modalTable.empty();
+              var counter=0;
+              for(var prop in node.data){
+              addProp(prop,node.data[prop]);
+              ++counter;
+                console.log(node.id,counter);
+              }
+      }
       var renderer = Morph.Graph.View.Renderer(graph, {
                   container: svg,
                   nodeSize: 30,
                   nodeColor: '#8abc4e',
-                  linkColor: '#f00'
+                  linkColor: '#f00',
+                  onNodeClick:function(node){
+                  $('#result-modal').show({
+                                         handle: ".modal-header"
+                                     });
+                                     fillNodeInfo(node);
+                  }
                 });
 
       function formatJSONString(inp){
