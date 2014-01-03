@@ -351,14 +351,16 @@ footer {
   background-color: rgba(27, 39, 169, 0.21);
   padding: .7em;
   text-indent: .3em;
-  width: 200px;
+  width: 400px;
 }
 .span6>h4{
   text-indent: 2em;
 }
+#result-modal table{
+  max-width: 300px;
+}
 td {
   border: 1px #304067 solid;
-
 }
 
 td:nth-child(1) {

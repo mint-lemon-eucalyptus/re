@@ -650,7 +650,7 @@ Morph.Graph.graph = function () {
         addLink: function (fromId, toId, id, data) {
             var fromNode = this.getNode(fromId) || this.addNode(fromId);
             var toNode = this.getNode(toId) || this.addNode(toId);
-            data.weight = data.weight | 1.0;
+            data.weight = 8.0;
             var link = new Morph.Graph.Link(fromId, toId, id, data);
 
             links.push(link);
@@ -1372,11 +1372,11 @@ Morph.Graph.Physics.forceSimulator = function (forceIntegrator) {
 
 Morph.Graph.Layout = Morph.Graph.Layout || {};
 Morph.Graph.Layout.forceDirected = function (graph, settings) {
-    var STABLE_THRESHOLD = 0.001;
+    var STABLE_THRESHOLD = 0.01;
     settings = Morph.lazyExtend(settings, {
         springLength: 80,
-        springCoeff: 0.0002,
-        gravity: -1.2,
+        springCoeff: 0.002,
+        gravity: -0.6,
         theta: 0.8,
         dragCoeff: 0.02
     });

@@ -27,7 +27,7 @@ function execQuery(query_, callback) {
         }
         // do something with graph object
         graph.query(query_, function (err, results) {
-            callback(null, results);
+            callback(err, results);
         });
     });
 
@@ -202,6 +202,7 @@ app.post('/ex-check', function (req, res) {
     console.log(query)
     execQuery(query, function (err, results) {
         if (err) {
+            console.log(err,results)
             res.send(
                 {
                     err: err
