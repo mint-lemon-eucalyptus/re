@@ -1,7 +1,8 @@
 extends layout
 
 block content
-    script(src="../javascripts/lib.js")
+    div
+      //script(src="../javascripts/lib.js")
 
     .content
       .container
@@ -34,7 +35,7 @@ block content
               .span6.ddb
                 h4 Результат запроса:
             .row
-              svg#result_svg.debug
+              //svg#result_svg.debug
               textarea#result_json(autofocus)
     .modal.hide(id='result-modal', tabindex='-1', role='dialog')
                     .modal-header
@@ -48,7 +49,7 @@ block content
 
     script(type='text/javascript').
       var queryArea, resultSvg, resultDiv;
-      var graph = Morph.Graph.graph();
+      //var graph = Morph.Graph.graph();
       var svg = document.getElementById('result_svg');
       var modal = $('#result-modal');
       var modalHeader = $('#result-modal>.modal-header>h4');
@@ -73,7 +74,7 @@ block content
                 modalTable.append('<tr><td>selected node has no properties</td></tr>');
               }
       }
-      var renderer = Morph.Graph.View.Renderer(graph, {
+      /*var renderer = Morph.Graph.View.Renderer(graph, {
                   container: svg,
                   nodeSize: 30,
                   nodeColor: '#8abc4e',
@@ -85,7 +86,7 @@ block content
                     fillNodeInfo(node);
                   }
                 });
-
+        */
 
       function sendQuery(){
           console.log(queryArea.val());
@@ -93,8 +94,8 @@ block content
             .done(function( data ) {
               console.log( "Data Loaded: ", data );
               resultDiv.val(JSON.stringify(data,null,4));
-              graph.fromJSON(data.results);
-              renderer.run();
+              //graph.fromJSON(data.results);
+              //renderer.run();
               queryArea.val("MATCH (a) RETURN a LIMIT 3");
               //graph.log();
             });
