@@ -1,13 +1,40 @@
+ create database testing;
+
+DROP ROLE IF EXISTS auth_client;
+CREATE ROLE auth_client;
+
+
+
+GRANT SELECT, UPDATE, INSERT, DELETE ON
+        users
+
+TO auth_client;
+
+GRANT USAGE ON SEQUENCE
+        users_id_seq
+TO auth_client;
+
+
+DROP USER IF EXISTS auth_user;
+CREATE USER auth_user WITH PASSWORD '12';
+
+
+GRANT auth_client TO auth_user;
+
+GRANT SELECT, UPDATE, INSERT ON
+        users
+
+TO auth_user;
+
+
 drop COLLATION if exists russian cascade;
 
 
 CREATE COLLATION russian  (LC_COLLATE='ru_RU.utf8', LC_CTYPE='ru_RU.utf8');
-ALTER COLLATION russian  OWNER TO TESTING_USER;
+ALTER COLLATION russian  OWNER TO auth_user;
 
- create database testing;
- create user testing_user with password '12';
 
-grant all privileges on database testing to testing_user;
+
 
 
 -- Table: users
@@ -23,6 +50,7 @@ CREATE TABLE users
   email character varying(50),
   pass character varying(35),
   confirm character varying(32),
+  role character varying(10),
   CONSTRAINT users_pkey PRIMARY KEY (id )
 );
 

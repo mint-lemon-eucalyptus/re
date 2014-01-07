@@ -1,0 +1,71 @@
+doctype 5
+html
+  head
+    title= title
+    meta(charset="utf-8")
+    meta(name="author", content="green-dev")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/bootstrap-responsive.min.css')
+    link(rel='stylesheet', href='/stylesheets/font-awesome.css')
+    link(rel='stylesheet', href='/stylesheets/font-awesome-ie7.css')
+    link(rel='stylesheet', href='/stylesheets/layout.css')
+
+  body
+    header
+      .navbar.navbar-fixed-top
+        .navbar-inner
+            .container
+              a(href="/", class="brand brand-bootbus") Home
+              button(class="btn btn-navbar", data-toggle="collapse", data-target=".nav-collapse")
+                span.icon-bar
+                span.icon-bar
+                span.icon-bar
+              .nav-collapse.collapse
+                ul.nav.pull-right
+                  li
+                    a(href="../") На главную
+                  //li
+                    a(href="../contact_us") Контакты
+    .content
+        .container
+          .page-header
+              h1 К сожалению, доступ к запрошенной странице закрыт.
+            .row-fluid
+              .span8
+                .span6
+                  .font-big
+                    403
+                .span6
+                  | Попробуйте перейти на другую страницу
+            h3
+              a(href="../", class="btn btn-primary") На главную
+    footer
+      //.container
+        .row
+          .span2
+            h4
+              i.icon-star.icon-white
+              a(href="../product/1", class="btn") Продукты
+            nav
+              ul.quick-links
+          .span2
+            h4
+              i.icon-beaker.icon-white
+              | О нас
+          .span2
+            h4
+              i.icon-thumbs-up.icon-white
+              | Вопросы?
+            nav
+              ul.quick-links
+                li
+                  a(href="faq") Помощь
+                li
+                  a(href="../contact_us") Контакты
+      hr.footer-divider
+      .container
+        //p &copy; 2012-3000 Bootbusiness, Inc. All Rights Reserved.
+      script(src="../javascripts/jquery.min.js")
+      script(src="../javascripts/bootstrap.min.js")
+      script(src="../javascripts/boot-business.js")

@@ -9,25 +9,26 @@ var path = require('path');
 var crypto = require('crypto');
 var nodemailer = require("nodemailer");
 var util = require('util');
+var pg = require('pg');
 
 var COOKIES_EXPIRE = 1000 * 60 * 60;
 
 var LOCAL = true;
 var DBNAME = 'testing';
-var DBUSER = 'testing_user';
+var DBUSER = 'auth_user';
 var DBPASS = '12';
 var neo4j = require('neo4j-js');
 
 function execQuery(query_, callback) {
     neo4j.connect('http://localhost:7474/db/data/', function (error, graph) {
         if (error) {
-            callback({error: error,cause:'Neo4j server is not started'}, null);
+            callback({error: error, cause: 'Neo4j server is not started'}, null);
 
             return;
         }
         // do something with graph object
         graph.query(query_, function (err, results) {
-            callback(err, results);
+            callback(null, results);
         });
     });
 
@@ -39,7 +40,7 @@ function execQuery(query_, callback) {
 //'postgres://postgres:12@localhost:5432/testinghall'
 
 
-function query(q, callback) {
+function postgresQuery(q, callback) {
     pg.connect('postgres://' + DBUSER + ':' + DBPASS + '@localhost:5432/' + DBNAME, function (err, db, done) {
         if (err) {
             done();
@@ -53,6 +54,9 @@ function query(q, callback) {
             q,
             function (err, rs) {
                 done();
+                if (rs) {
+                    console.log(rs.rows)
+                }
                 if (callback) {
                     if (err) {
                         callback(err);
@@ -71,20 +75,39 @@ var config = require('./config.js');
 var helps = require('./helps.js');
 
 function prepareDataBase() {
-    query({
-        name: 'register user',
-        text: 'Insert INTO users(name, email, pass, confirm) values($1, $2, $3, $4);',
-        values: ['qqq', 'qqq', 'www', 'wqwqw']
+
+
+    postgresQuery({
+        name: 'register admin check',
+        text: 'select * from users where role=$1;',
+        values: ['admin']
     }, function (err, rs) {
         if (err) {
-            console.log(new Date() + '\tregister error' + err);
-            return;
+            console.log(new Date() + '\tdb error ' + err);
+//            return;
         } else {
-            console.log(new Date() + '\tregister success');
+            console.log(rs)
+            if (!rs[0]) {
+                console.log(new Date() + '\tno admin found');
+                postgresQuery({
+                    name: 'register admin',
+                    text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
+                    values: ['qqq', 'qqq@qqq.ru', 'qqq', null, 'admin']
+                }, function (err, res) {
+                    if (err) {
+                        console.log(new Date() + '\tregister error ' + err);
+//            return;
+                    } else {
+                        console.log(new Date() + '\tregister success');
+                    }
+                });
+            } else {
+                console.log(new Date() + '\t admin found: ', rs[0]);
+            }
         }
     });
 }
-//prepareDataBase();
+prepareDataBase();
 
 
 var app = express();
@@ -153,26 +176,37 @@ app.get('/', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
     var n = req.cookies.n;  //username
-
+    var role = req.cookies.role;
+    console.log('role:  ', role)
+    var bean = {role: role};
     if (!res.locals.session.auth || !l || !p || !n) {
         res.render('index');
     } else {
-        query(
+        postgresQuery(
             {
                 name: 'login user',
-                text: 'select id, name from users where email=$1 and pass=$2;',
+                text: 'select id, name, role from users where email=$1 and pass=$2;',
                 values: [l, p]
             },
             function (err, rs) {
                 if (err || rs.length == 0) {
+                    res.clearCookie('l');
+                    res.clearCookie('i');
+                    res.clearCookie('n');
+                    res.clearCookie('p');
+                    res.clearCookie('role');
+                    res.render('index');
                 }
                 else {
                     res.locals.session.auth = true;
                     res.locals.cookies.l = l;
                     res.locals.cookies.p = p;
+                    if (rs[0].role) {
+                        res.locals.cookies.role = rs[0].role;
+                    }
                     res.locals.cookies.n = rs[0].name;
                     res.locals.cookies.id = rs[0].id;
-                    res.render('index');
+                    res.render('index', bean);
 //            res.send(new Date()+'   '+util.inspect(res.locals.session));
 //              res.send(res.locals.cookies);
                 }
@@ -180,6 +214,61 @@ app.get('/', function (req, res) {
         );
     }
 });
+
+function to404(req,res){
+    res.redirect('404')
+}
+function to403(req,res){
+    res.redirect('403')
+}
+
+app.get('/admin', function (req, res) {
+    checkAdmin(req, res, function (bean) {
+        console.log('checkAdmin:  ',true );
+        res.render('admin');
+    })
+});
+
+function checkAdmin(req, res, success) {
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    var n = req.cookies.n;  //username
+    var role = req.cookies.role;
+    var bean = {role: role};
+
+    postgresQuery(
+        {
+            name: 'check admin login',
+            text: 'select id, name, role from users where email=$1 and pass=$2;',
+            values: [l, p]
+        },
+        function (err, rs) {
+            if (err || rs.length == 0) {
+                res.clearCookie('l');
+                res.clearCookie('i');
+                res.clearCookie('n');
+                res.clearCookie('p');
+                res.clearCookie('role');
+                res.render('index');
+            }
+            else {
+                res.locals.session.auth = true;
+                res.locals.cookies.l = l;
+                res.locals.cookies.p = p;
+//                console.log('checkAdmin:  ',rs[0] );
+                res.locals.cookies.n = rs[0].name;
+                res.locals.cookies.id = rs[0].id;
+                if (rs[0].role=='admin') {
+                    res.locals.cookies.role = rs[0].role;
+                    success(bean);
+                }else{
+                    to403(req,res);
+                }
+            }
+        });
+
+}
+
 
 app.get('/excercises', function (req, res) {
     res.render('excercises', {excercises: excercises});
@@ -202,7 +291,7 @@ app.post('/ex-check', function (req, res) {
     console.log(query)
     execQuery(query, function (err, results) {
         if (err) {
-            console.log(err,results)
+            console.log(err, results)
             res.send(
                 {
                     err: err
@@ -252,11 +341,11 @@ app.post('/sign-up-controller', function (req, res) {
     var bean = {};
     var md5 = crypto.createHash('md5').update(post.email + 'aaa' + post.pass).digest("hex");
     // res.send(md5);
-    query(
+    postgresQuery(
         {
             name: 'register user',
-            text: 'Insert INTO users(name, email, pass, confirm) values($1, $2, $3, $4);',
-            values: [post.name, post.email, post.pass, md5]
+            text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
+            values: [post.name, post.email, post.pass, md5, 'user']
         },
         function (err, rs) {
             if (err) {
@@ -278,14 +367,14 @@ app.post('/sign-up-controller', function (req, res) {
                     to: post.email, // list of receivers
                     subject: "Регистрация на сайте pokrov-mead.tk", // Subject line
                     text: "Для подтверждения регистрации перейдите по ссылке: ", // plaintext body
-                    html: "<b>Для подтверждения регистрации перейдите по </b><a href='pokrov-mead.tk/register/" + md5 + "'>ссылке</a>" // html body
+                    html: "<b>Для подтверждения регистрации перейдите по </b><a href='localhost/register/" + md5 + "'>ссылке</a>" // html body
                 }
 
                 var smtpTransport = nodemailer.createTransport("SMTP", {
                     service: "Gmail",
                     auth: {
-                        user: "ya.dim.tk@gmail.com",
-                        pass: "uf60kfrnbrj_fl9"
+                        user: "superoot.protech@gmail.com",
+                        pass: "hflbfnjh_nhfdjzlysq"
                     }
                 });
 
@@ -306,10 +395,10 @@ app.post('/sign-up-controller', function (req, res) {
 //login controller
 app.post('/sign-in-controller', function (req, res) {
     var post = req.body;
-    query(
+    postgresQuery(
         {
             name: 'login user',
-            text: 'select name from users where email=$1 and pass=$2 and confirm is null;',
+            text: 'select id, name, role from users where email=$1 and pass=$2 and confirm is null;',
             values: [post.email, post.pass]
         },
         function (err, rs) {
@@ -317,9 +406,15 @@ app.post('/sign-in-controller', function (req, res) {
                 res.render('sign_in', {error: true});
                 return;
             }
+            //    console.log(rs)
+            res.cookie('i', rs[0].id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             res.cookie('l', post.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             res.cookie('p', post.pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             res.cookie('n', rs[0].name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            console.log(rs[0].role)
+            if (rs[0].role != null) {
+                res.cookie('role', rs[0].role, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            }
             res.locals.session.auth = true;
 //        res.send(rs);
             res.redirect('/');
@@ -330,6 +425,7 @@ app.post('/sign-in-controller', function (req, res) {
 app.get('/logout', function (req, res) {
     delete req.session;
     res.clearCookie('l');
+    res.clearCookie('i');
     res.clearCookie('n');
     res.clearCookie('p');
     res.redirect('/');
@@ -349,7 +445,7 @@ app.get('/order/:id', function (req, res) {
 
 app.get('/register/:key?', function (req, res) {
     var sublink = req.params.key;
-    query(
+    postgresQuery(
         {
             name: 'register user confirm',
             text: 'update users set confirm = null where confirm=$1 returning id, email, pass, name;',
@@ -370,6 +466,9 @@ app.get('/register/:key?', function (req, res) {
 app.get('/contact_us', function (req, res) {
     res.render('contact_us', obj);
 });
+app.get('/403', function (req, res) {
+        res.render('403');
+});
 
 app.get('/db_name', db_name);
 app.get('/db_view', db_view);
@@ -386,7 +485,7 @@ app.get('/env', function (req, res) {
  }
  app.post('/sign-in-controller', function (req, res) {
  var post = req.body;
- query(
+ postgresQuery(
  {
  name: 'login user',
  text: 'select name from users where email=$1 and pass=$2;',
@@ -414,7 +513,7 @@ http.createServer(app).listen(app.get('port'), function () {
 
 function db_name(req, res) {
     var t = '';
-    query(
+    postgresQuery(
         {
             text: 'select * from current_database();',
             name: 'database name',
@@ -432,7 +531,7 @@ function db_name(req, res) {
 
 function db_view(req, res) {
     var t = '';
-    query(
+    postgresQuery(
         {
             text: 'select * from users;',
             name: 'database name',

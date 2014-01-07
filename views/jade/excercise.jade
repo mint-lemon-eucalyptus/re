@@ -3,6 +3,7 @@ extends layout
 block content
     div
       //script(src="../javascripts/lib.js")
+      script(src="../javascripts/parser.js")
 
     .content
       .container
@@ -36,7 +37,7 @@ block content
                 h4 Результат запроса:
             .row
               //svg#result_svg.debug
-              textarea#result_json(autofocus)
+              textarea#result_json.debug(autofocus)
     .modal.hide(id='result-modal', tabindex='-1', role='dialog')
                     .modal-header
                       h4 Id:
@@ -54,6 +55,8 @@ block content
       var modal = $('#result-modal');
       var modalHeader = $('#result-modal>.modal-header>h4');
       var modalTable = $('#result-modal>.modal-body>table');
+      var parser = new Parser();
+
       function fillNodeInfo(node){
               modalHeader.text('Id: '+node.id);
 
@@ -93,10 +96,11 @@ block content
           $.post( "../ex-check", { query: queryArea.val()})
             .done(function( data ) {
               console.log( "Data Loaded: ", data );
-              resultDiv.val(JSON.stringify(data,null,4));
+              parser.fromJson(data);
+              //resultDiv.val(JSON.stringify(data,null,4));
               //graph.fromJSON(data.results);
               //renderer.run();
-              queryArea.val("MATCH (a) RETURN a LIMIT 3");
+              queryArea.val("");
               //graph.log();
             });
       }
@@ -105,6 +109,7 @@ block content
         queryArea=$('#query-area');
         resultSvg=$('#result_svg');
         resultDiv=$('#result_json');
+        parser.init({container:resultDiv, ru:'ru'});
 
 
         $('#query-area').keydown(function (e) {
@@ -116,3 +121,4 @@ block content
         });
         queryArea.focus();
       });
+

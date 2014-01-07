@@ -43,6 +43,11 @@ html
                           a(href="../user/#{cookies.id}")=cookies.n
                         li
                           a(href="../logout") Выход
+                    - console.log(role);
+                    if(role=='admin')
+                      li
+                        a(href="../admin") admin
+
       script(src="../javascripts/jquery.min.js")
       script(src="../javascripts/bootstrap.min.js")
       script(src="../javascripts/bootstrap-slider.js")

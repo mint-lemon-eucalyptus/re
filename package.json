@@ -11,6 +11,7 @@
     "stylus": "*",
       "nodemailer": "*",
       "neo4j": "*",
+      "pg":"*",
       "neo4j-js": "*"
   }
 }
