@@ -91,7 +91,7 @@ var app = express();
 // all environments
 //var MemoryStore = require('connect/middleware/session/memory');
 
-app.set('port', process.env.PORT || 3000);
+app.set('port', process.env.PORT || 16097);
 app.set('views', __dirname + '/views/jade');
 app.set('view engine', 'jade');
 app.use(express.favicon());
