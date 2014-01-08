@@ -5,18 +5,66 @@ block content
         .container
             .page-header
                 h4 Select queries
+        script(type='text/javascript', src="../plugins/tinymce/tinymce.min.js")
         #frames.container
             #index.row-fluid
                 .span9.left-column.debug
-                    .column-header.debug
-                        p Введение в нереляционные базы данных
-                    p Графы - абстрактные модели данных, описывающие структурные отношения между объектами. Сегодня графы широко используются для моделировании данных в различных предметных областях, требующих выяснения и определения правил и схем отношений объектов. Такими предметными областями являются социальные сети, семантический Web, базы знаний, сети белок-белковых взаимодействий, библиографические сети и т. д.
-                    p Постоянно растущий объем плохо структурированных данных требует наличия инструментов для их обработки в виде NoSQL базы данных и языка запросов, позволяющего манипулировать этими данными.
-                    p Задача этого ресурса - знакомство с сетевой моделью данных на примере СУБД Neo4j.
-                    p <b>Neo4j</b> - это надежная и высокопроизводительная нереляционная ACID база данных, поддерживающая возможность манипуляции данными на собственном языке запросов <b>&quotCypher&quot</b>. Упражнения будут построены на основе ее языка запросов версии 1.9.5. При выполнении каждого упражнения будут даваться ссылки на обучающие материалы.
+                    form(method='post', action='../admin/help-editor')
+                        textarea(name='content', style='width: 100%;')
+                    script(type='text/javascript').
 
+                        tinymce.init({
+                                selector: "textarea",
+                                plugins: [
+                                        "advlist autolink autosave link image lists charmap print preview hr anchor pagebreak spellchecker",
+                                        "searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking",
+                                        "table contextmenu directionality emoticons template textcolor paste fullpage textcolor"
+                                ],
 
+                                toolbar1: "newdocument fullpage | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | styleselect formatselect fontselect fontsizeselect",
+                                toolbar2: "cut copy paste | searchreplace | bullist numlist | outdent indent blockquote | undo redo | link unlink anchor image media code | inserttime preview | forecolor backcolor",
+                                toolbar3: "table | hr removeformat | subscript superscript | charmap emoticons | print fullscreen | ltr rtl | spellchecker | visualchars visualblocks nonbreaking template pagebreak restoredraft",
 
+                                menubar: false,
+                                toolbar_items_size: 'small',
+
+                                style_formats: [
+                                        {title: 'Bold text', inline: 'b'},
+                                        {title: 'Red text', inline: 'span', styles: {color: '#ff0000'}},
+                                        {title: 'Red header', block: 'h1', styles: {color: '#ff0000'}},
+                                        {title: 'Example 1', inline: 'span', classes: 'example1'},
+                                        {title: 'Example 2', inline: 'span', classes: 'example2'},
+                                        {title: 'Table styles'},
+                                        {title: 'Table row 1', selector: 'tr', classes: 'tablerow1'}
+                                ],
+
+                                templates: [
+                                        {title: 'Test template 1', content: 'Test 1'},
+                                        {title: 'Test template 2', content: 'Test 2'}
+                                ]
+                        });
+                        function ajaxLoad() {
+                                var ed = tinyMCE.get('content');
+
+                                // Do you ajax call here, window.setTimeout fakes ajax call
+                                ed.setProgressState(1); // Show progress
+                                window.setTimeout(function() {
+                                        ed.setProgressState(0); // Hide progress
+                                        ed.setContent('HTML content that got passed from server.');
+                                }, 3000);
+                        }
+
+                        function ajaxSave() {
+                                var ed = tinyMCE.get('content');
+
+                                // Do you ajax call here, window.setTimeout fakes ajax call
+                                ed.setProgressState(1); // Show progress
+                                window.setTimeout(function() {
+                                        ed.setProgressState(0); // Hide progress
+                                        alert(ed.getContent());
+                                }, 3000);
+                        }
+                        setTimeout(function(){console.log(tinyMCE.activeEditor.getContent())},3000);
 
                 .span3.right-column
                     .column-header

@@ -241,15 +241,12 @@ footer {
   }
 }
 
-.left-column {
+.left-col {
   background-color: #e1e1e1;
   font-size: 1.2em;
   text-indent: 3em;
 }
 
-#index {
-  text-indent: 3em;
-}
 
 .column-header {
   background-color: #9fcad5;

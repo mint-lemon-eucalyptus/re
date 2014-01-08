@@ -21,7 +21,7 @@ var DBUSER = 'auth_user';
 var DBPASS = '12';
 var neo4j = require('neo4j-js');
 
-function execQuery(query_, callback) {
+function execCypherQuery(query_, callback) {
     neo4j.connect('http://localhost:7474/db/data/', function (error, graph) {
         if (error) {
             callback({error: error, cause: 'Neo4j server is not started'}, null);
@@ -182,6 +182,7 @@ function clearAllCookies(res) {
     res.clearCookie('n');
     res.clearCookie('p');
     res.clearCookie('role');
+    delete res.locals.session.auth;
 }
 
 app.get('/', function (req, res) {
@@ -265,7 +266,7 @@ function to403(req, res) {
 app.get('/admin', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
-    console.log(l,p)
+    console.log('/admin',l,p)
     authByEmailPass(l, p, function (user) {
         if (user && user.role == 'admin') {
             res.render('admin', {path: 'admin'});
@@ -277,12 +278,22 @@ app.get('/admin', function (req, res) {
 });
 
 app.get('/admin/help-editor', function (req, res) {
-    checkAdmin(req, res, function (bean) {
-        console.log('checkAdmin:  ', true);
-        res.render('help-editor', {});
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    console.log(l,p)
+    authByEmailPass(l, p, function (user) {
+        if (user && user.role == 'admin') {
+            res.render('help-editor', {});
+        } else {
+            clearAllCookies(res)
+            res.render('403');
+        }
     })
 });
 
+app.post('/admin/help-editor', function (req, res) {
+    console.log(req.body)
+});
 function checkAdmin(req, res, success) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
@@ -343,7 +354,7 @@ app.get('/excercises/:id', function (req, res) {
 app.post('/ex-check', function (req, res) {
     var query = req.body.query;
     console.log(query)
-    execQuery(query, function (err, results) {
+    execCypherQuery(query, function (err, results) {
         if (err) {
             console.log(err, results)
             res.send(
