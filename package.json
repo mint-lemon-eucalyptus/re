@@ -12,6 +12,7 @@
       "nodemailer": "*",
       "neo4j": "*",
       "pg":"*",
+      "node-cache":"*",
       "neo4j-js": "*"
   }
 }

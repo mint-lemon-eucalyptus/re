@@ -11,7 +11,9 @@ var nodemailer = require("nodemailer");
 var util = require('util');
 var pg = require('pg');
 
-var COOKIES_EXPIRE = 1000 * 60 * 60;
+var COOKIES_EXPIRE_SECS = 60 * 60;
+var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000;
+
 
 var LOCAL = true;
 var DBNAME = 'testing';
@@ -55,7 +57,7 @@ function postgresQuery(q, callback) {
             function (err, rs) {
                 done();
                 if (rs) {
-                    console.log(rs.rows)
+                    console.log('postgresql: ', rs.rows)
                 }
                 if (callback) {
                     if (err) {
@@ -86,7 +88,7 @@ function prepareDataBase() {
             console.log(new Date() + '\tdb error ' + err);
 //            return;
         } else {
-            console.log(rs)
+//            console.log(rs)
             if (!rs[0]) {
                 console.log(new Date() + '\tno admin found');
                 postgresQuery({
@@ -102,12 +104,16 @@ function prepareDataBase() {
                     }
                 });
             } else {
-                console.log(new Date() + '\t admin found: ', rs[0]);
+                console.log(new Date() + '\t admin found: ', rs[0].email, rs[0].pass);
             }
         }
     });
 }
+
 prepareDataBase();
+
+var NodeCache = require("node-cache");
+var cache = new NodeCache();
 
 
 var app = express();
@@ -170,62 +176,110 @@ if ('development' == app.get('env')) {
     app.use(express.errorHandler());
 }
 
+function clearAllCookies(res) {
+    res.clearCookie('l');
+    res.clearCookie('i');
+    res.clearCookie('n');
+    res.clearCookie('p');
+    res.clearCookie('role');
+}
 
 app.get('/', function (req, res) {
     //   console.log(util.inspect(req))
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
     var n = req.cookies.n;  //username
+    var id = req.cookies.i;  //user id
     var role = req.cookies.role;
-    console.log('role:  ', role)
+    console.log('role:  ', role, id)
     var bean = {role: role};
     if (!res.locals.session.auth || !l || !p || !n) {
         res.render('index');
     } else {
-        postgresQuery(
-            {
-                name: 'login user',
-                text: 'select id, name, role from users where email=$1 and pass=$2;',
-                values: [l, p]
-            },
-            function (err, rs) {
-                if (err || rs.length == 0) {
-                    res.clearCookie('l');
-                    res.clearCookie('i');
-                    res.clearCookie('n');
-                    res.clearCookie('p');
-                    res.clearCookie('role');
-                    res.render('index');
-                }
-                else {
-                    res.locals.session.auth = true;
-                    res.locals.cookies.l = l;
-                    res.locals.cookies.p = p;
-                    if (rs[0].role) {
-                        res.locals.cookies.role = rs[0].role;
-                    }
-                    res.locals.cookies.n = rs[0].name;
-                    res.locals.cookies.id = rs[0].id;
-                    res.render('index', bean);
-//            res.send(new Date()+'   '+util.inspect(res.locals.session));
-//              res.send(res.locals.cookies);
-                }
+        authByEmailPass(l, p, function (user) {
+            if (user) {
+                res.locals.session.auth = true;
+                res.locals.user = user;
+                res.render('index', bean);
+            } else {
+                clearAllCookies(res);
+                res.render('index');
             }
-        );
+        })
     }
 });
 
-function to404(req,res){
+
+//callback is function(user) user=obj or null
+function authByEmailPass(login, pass, callback) {
+    if(!login||!pass){
+        callback(null);
+        return;
+    }
+    cache.get(login, function (err, user) {
+        if (!user[login]) {
+            //user is not in the cache
+            //attempt to find user in db and put to cache
+            postgresQuery(
+                {
+                    name: 'login user',
+                    text: 'select * from auth_user($1,$2);',
+                    values: [login, pass]
+                },
+                function (err, rs) {
+                    if (err || rs.length == 0) {
+                        //wrong cookies
+                        callback(null);
+                    }
+                    else {
+                        //good cookies - put user to cache
+                        cache.set(rs[0].email, rs[0], COOKIES_EXPIRE_SECS, function (err) {
+                            if (err) {
+                                console.log('cache error:', err);
+                            }
+                            //and callback true
+                            callback(rs[0]);
+                        })
+                    }
+                }
+            );
+        }
+        else {
+            console.log('auth from cache:', user[login].email);
+            callback(user[login])
+        }
+    })
+}
+
+function auth(req, callback) {
+    authByEmailPass(req.cookies.l, req.cookies.p, callback)
+}
+
+function to404(req, res) {
     res.redirect('404')
 }
-function to403(req,res){
+function to403(req, res) {
     res.redirect('403')
 }
 
 app.get('/admin', function (req, res) {
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    console.log(l,p)
+    authByEmailPass(l, p, function (user) {
+        if (user && user.role == 'admin') {
+            res.render('admin', {path: 'admin'});
+        } else {
+            clearAllCookies(res)
+            res.render('403');
+        }
+    })
+});
+
+app.get('/admin/help-editor', function (req, res) {
     checkAdmin(req, res, function (bean) {
-        console.log('checkAdmin:  ',true );
-        res.render('admin');
+        console.log('checkAdmin:  ', true);
+        res.render('help-editor', {});
     })
 });
 
@@ -258,11 +312,11 @@ function checkAdmin(req, res, success) {
 //                console.log('checkAdmin:  ',rs[0] );
                 res.locals.cookies.n = rs[0].name;
                 res.locals.cookies.id = rs[0].id;
-                if (rs[0].role=='admin') {
+                if (rs[0].role == 'admin') {
                     res.locals.cookies.role = rs[0].role;
                     success(bean);
-                }else{
-                    to403(req,res);
+                } else {
+                    to403(req, res);
                 }
             }
         });
@@ -344,7 +398,7 @@ app.post('/sign-up-controller', function (req, res) {
     postgresQuery(
         {
             name: 'register user',
-            text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
+            text: 'select * from reg_user($1, $2, $3, $4, $5);',
             values: [post.name, post.email, post.pass, md5, 'user']
         },
         function (err, rs) {
@@ -395,39 +449,30 @@ app.post('/sign-up-controller', function (req, res) {
 //login controller
 app.post('/sign-in-controller', function (req, res) {
     var post = req.body;
-    postgresQuery(
-        {
-            name: 'login user',
-            text: 'select id, name, role from users where email=$1 and pass=$2 and confirm is null;',
-            values: [post.email, post.pass]
-        },
-        function (err, rs) {
-            if (err || rs.length == 0) {
-                res.render('sign_in', {error: true});
-                return;
-            }
-            //    console.log(rs)
-            res.cookie('i', rs[0].id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
-            res.cookie('l', post.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
-            res.cookie('p', post.pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
-            res.cookie('n', rs[0].name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
-            console.log(rs[0].role)
-            if (rs[0].role != null) {
-                res.cookie('role', rs[0].role, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+    console.log(post)
+    authByEmailPass(post.email, post.pass, function (user) {
+        if (user == null) {
+            res.render('sign_in', {error: true});
+        } else {
+            res.cookie('i', user.id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('l', user.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('p', user.pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('n', user.name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            console.log(user.role)
+            if (user.role != null) {
+                res.cookie('role', user.role, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             }
             res.locals.session.auth = true;
 //        res.send(rs);
             res.redirect('/');
+
         }
-    );
+    });
 });
 
 app.get('/logout', function (req, res) {
     delete req.session;
-    res.clearCookie('l');
-    res.clearCookie('i');
-    res.clearCookie('n');
-    res.clearCookie('p');
+    clearAllCookies(res);
     res.redirect('/');
 });
 
@@ -445,6 +490,7 @@ app.get('/order/:id', function (req, res) {
 
 app.get('/register/:key?', function (req, res) {
     var sublink = req.params.key;
+
     postgresQuery(
         {
             name: 'register user confirm',
@@ -467,7 +513,7 @@ app.get('/contact_us', function (req, res) {
     res.render('contact_us', obj);
 });
 app.get('/403', function (req, res) {
-        res.render('403');
+    res.render('403');
 });
 
 app.get('/db_name', db_name);
@@ -510,6 +556,13 @@ app.get('/env', function (req, res) {
 http.createServer(app).listen(app.get('port'), function () {
     console.log('Express server listening on port ' + app.get('port'));
 });
+
+
+//stats
+app.get('/cache-stats', function (req, res) {
+    res.send(cache.getStats());
+});
+
 
 function db_name(req, res) {
     var t = '';

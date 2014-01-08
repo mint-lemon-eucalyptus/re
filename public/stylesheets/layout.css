@@ -374,3 +374,10 @@ td:nth-child(2) {
 #result-modal th {
   width: 60%;
 }
+p.head-name.brand{
+color: red;
+  text-decoration: underline;
+}
+.twice-head{
+  margin-top: 30px;
+}
