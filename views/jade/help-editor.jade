@@ -18,10 +18,10 @@ block content
                                 plugins: [
                                         "advlist autolink autosave link image lists charmap print preview hr anchor pagebreak spellchecker",
                                         "searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking",
-                                        "table contextmenu directionality emoticons template textcolor paste fullpage textcolor"
+                                        "table contextmenu directionality emoticons template textcolor paste textcolor"
                                 ],
 
-                                toolbar1: "newdocument fullpage | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | styleselect formatselect fontselect fontsizeselect",
+                                toolbar1: "newdocument | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | styleselect formatselect fontselect fontsizeselect",
                                 toolbar2: "cut copy paste | searchreplace | bullist numlist | outdent indent blockquote | undo redo | link unlink anchor image media code | inserttime preview | forecolor backcolor",
                                 toolbar3: "table | hr removeformat | subscript superscript | charmap emoticons | print fullscreen | ltr rtl | spellchecker | visualchars visualblocks nonbreaking template pagebreak restoredraft",
 
@@ -43,27 +43,6 @@ block content
                                         {title: 'Test template 2', content: 'Test 2'}
                                 ]
                         });
-                        function ajaxLoad() {
-                                var ed = tinyMCE.get('content');
-
-                                // Do you ajax call here, window.setTimeout fakes ajax call
-                                ed.setProgressState(1); // Show progress
-                                window.setTimeout(function() {
-                                        ed.setProgressState(0); // Hide progress
-                                        ed.setContent('HTML content that got passed from server.');
-                                }, 3000);
-                        }
-
-                        function ajaxSave() {
-                                var ed = tinyMCE.get('content');
-
-                                // Do you ajax call here, window.setTimeout fakes ajax call
-                                ed.setProgressState(1); // Show progress
-                                window.setTimeout(function() {
-                                        ed.setProgressState(0); // Hide progress
-                                        alert(ed.getContent());
-                                }, 3000);
-                        }
                         setTimeout(function(){console.log(tinyMCE.activeEditor.getContent())},3000);
 
                 .span3.right-column

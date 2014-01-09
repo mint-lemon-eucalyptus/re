@@ -4,12 +4,6 @@ CREATE DATABASE testing;
 DROP ROLE IF EXISTS auth_client;
 CREATE ROLE auth_client;
 
-DROP COLLATION IF EXISTS russian CASCADE;
-
-
-CREATE COLLATION russian  ( LC_COLLATE = 'ru_RU.utf8', LC_CTYPE = 'ru_RU.utf8');
-ALTER COLLATION russian
-OWNER TO auth_user;
 
 GRANT CREATE ON
 DATABASE testing
@@ -26,7 +20,7 @@ CREATE TABLE users
 (
   id      SERIAL                   NOT NULL,
   dt      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  name    CHARACTER VARYING(64) COLLATE public.russian,
+  name    CHARACTER VARYING(64),
   email   CHARACTER VARYING(50),
   pass    CHARACTER VARYING(35),
   confirm CHARACTER VARYING(32),
@@ -40,7 +34,7 @@ CREATE TABLE helps
   id        SERIAL                   NOT NULL,
   dtcreated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   author    INTEGER REFERENCES users (id),
-  name      TEXT COLLATE public.russian,
+  name      TEXT,
   version   TEXT,
   content   TEXT,
   CONSTRAINT helps_pkey PRIMARY KEY (id)
@@ -57,12 +51,6 @@ TO auth_client;
 
 -- Index: users_pass_ci
 
--- DROP INDEX users_pass_ci;
-
-CREATE INDEX users_pass_ci
-ON users
-USING BTREE
-(lower(name :: TEXT) COLLATE public.russian varchar_pattern_ops);
 
 -- Index: users_email
 

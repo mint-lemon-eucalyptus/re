@@ -428,11 +428,12 @@ app.post('/sign-up-controller', function (req, res) {
 
                 // setup e-mail data with unicode symbols
                 var mailOptions = {
-                    from: "ya.dim.tk@gmail.com", // sender address
+                    from: "mint.lemon.eucalyptys@gmail.com", // sender address
                     to: post.email, // list of receivers
-                    subject: "Регистрация на сайте pokrov-mead.tk", // Subject line
-                    text: "Для подтверждения регистрации перейдите по ссылке: ", // plaintext body
-                    html: "<b>Для подтверждения регистрации перейдите по </b><a href='localhost/register/" + md5 + "'>ссылке</a>" // html body
+                    subject: "Регистрация для neo4j-ex", // Subject line
+                    text: "подтверждение регистрации: ", // plaintext body
+                    html: "<b>Для подтверждения регистрации "+
+                        'вставьте в адресую строку:   '+(req.protocol + "://" + req.get('host') + '/register/')+md5
                 }
 
                 var smtpTransport = nodemailer.createTransport("SMTP", {
