@@ -1392,7 +1392,7 @@
 				 }
 			 }
 			 
-			 // If a field change event triggered this we want to clear the cache for this ID
+			 // If a field change event triggered this we want to clear the usersCache for this ID
 			 if (options.eventTrigger == "field") {
 				delete(options.ajaxValidCache[field.attr("id")]);
 			 }

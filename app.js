@@ -57,7 +57,7 @@ function postgresQuery(q, callback) {
             function (err, rs) {
                 done();
                 if (rs) {
-                    console.log('postgresql: ', rs.rows)
+                    console.log('postgresql: ', q.name, rs.rows)
                 }
                 if (callback) {
                     if (err) {
@@ -113,7 +113,8 @@ function prepareDataBase() {
 prepareDataBase();
 
 var NodeCache = require("node-cache");
-var cache = new NodeCache();
+var usersCache = new NodeCache();
+var chaptersCache = new NodeCache();
 
 
 var app = express();
@@ -170,7 +171,38 @@ app.use(function (req, res, next) {
 
 app.locals.config = config;
 
-
+function getChapters(callback) {
+    postgresQuery({
+            name: 'get chapters info',
+            text: 'select * from help_chapters;',
+            values: []
+        },
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                callback([]);
+            }
+            else {
+                callback(res);
+            }
+        })
+}
+function addChapter(ch, callback) {
+    postgresQuery({
+            name: 'add new chapter',
+            text: 'select * from add_chapter($1,$2,$3);',
+            values: [ch.parent, ch.name, ch.author]
+        },
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                callback([]);
+            }
+            else {
+                callback(res);
+            }
+        })
+}
 // development only
 if ('development' == app.get('env')) {
     app.use(express.errorHandler());
@@ -213,14 +245,14 @@ app.get('/', function (req, res) {
 
 //callback is function(user) user=obj or null
 function authByEmailPass(login, pass, callback) {
-    if(!login||!pass){
+    if (!login || !pass) {
         callback(null);
         return;
     }
-    cache.get(login, function (err, user) {
+    usersCache.get(login, function (err, user) {
         if (!user[login]) {
-            //user is not in the cache
-            //attempt to find user in db and put to cache
+            //user is not in the usersCache
+            //attempt to find user in db and put to usersCache
             postgresQuery(
                 {
                     name: 'login user',
@@ -233,8 +265,8 @@ function authByEmailPass(login, pass, callback) {
                         callback(null);
                     }
                     else {
-                        //good cookies - put user to cache
-                        cache.set(rs[0].email, rs[0], COOKIES_EXPIRE_SECS, function (err) {
+                        //good cookies - put user to usersCache
+                        usersCache.set(rs[0].email, rs[0], COOKIES_EXPIRE_SECS, function (err) {
                             if (err) {
                                 console.log('cache error:', err);
                             }
@@ -266,7 +298,7 @@ function to403(req, res) {
 app.get('/admin', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
-    console.log('/admin',l,p)
+    console.log('/admin', l, p)
     authByEmailPass(l, p, function (user) {
         if (user && user.role == 'admin') {
             res.render('admin', {path: 'admin'});
@@ -280,10 +312,37 @@ app.get('/admin', function (req, res) {
 app.get('/admin/help-editor', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
-    console.log(l,p)
+    console.log(l, p)
     authByEmailPass(l, p, function (user) {
         if (user && user.role == 'admin') {
             res.render('help-editor', {});
+        } else {
+            clearAllCookies(res)
+            res.render('403');
+        }
+    })
+});
+
+app.post('/admin/help-editor/chapter_hierarchy', function (req, res) {
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    var json = req.body;
+    console.log('req.body', json);
+    authByEmailPass(l, p, function (user) {
+        if (user && user.role == 'admin') {
+            if (json.cmd === 'set') {
+                addChapter({
+                    name: json.name,
+                    author: user.id,
+                    parent: json.parent
+                },function(result){
+                    res.send(result);
+                })
+            } else {
+                getChapters(function (chaptersArr) {
+                    res.send(chaptersArr);
+                })
+            }
         } else {
             clearAllCookies(res)
             res.render('403');
@@ -432,8 +491,8 @@ app.post('/sign-up-controller', function (req, res) {
                     to: post.email, // list of receivers
                     subject: "Регистрация для neo4j-ex", // Subject line
                     text: "подтверждение регистрации: ", // plaintext body
-                    html: "<b>Для подтверждения регистрации "+
-                        'вставьте в адресую строку:   '+(req.protocol + "://" + req.get('host') + '/register/')+md5
+                    html: "<b>Для подтверждения регистрации " +
+                        'вставьте в адресую строку:   ' + (req.protocol + "://" + req.get('host') + '/register/') + md5
                 }
 
                 var smtpTransport = nodemailer.createTransport("SMTP", {
@@ -572,7 +631,7 @@ http.createServer(app).listen(app.get('port'), function () {
 
 //stats
 app.get('/cache-stats', function (req, res) {
-    res.send(cache.getStats());
+    res.send(usersCache.getStats());
 });
 
 

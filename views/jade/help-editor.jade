@@ -9,42 +9,78 @@ block content
         #frames.container
             #index.row-fluid
                 .span9.left-column.debug
-                    form(method='post', action='../admin/help-editor')
-                        textarea(name='content', style='width: 100%;')
-                    script(type='text/javascript').
-
-                        tinymce.init({
-                                selector: "textarea",
-                                plugins: [
-                                        "advlist autolink autosave link image lists charmap print preview hr anchor pagebreak spellchecker",
-                                        "searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking",
-                                        "table contextmenu directionality emoticons template textcolor paste textcolor"
-                                ],
-
-                                toolbar1: "newdocument | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | styleselect formatselect fontselect fontsizeselect",
-                                toolbar2: "cut copy paste | searchreplace | bullist numlist | outdent indent blockquote | undo redo | link unlink anchor image media code | inserttime preview | forecolor backcolor",
-                                toolbar3: "table | hr removeformat | subscript superscript | charmap emoticons | print fullscreen | ltr rtl | spellchecker | visualchars visualblocks nonbreaking template pagebreak restoredraft",
-
-                                menubar: false,
-                                toolbar_items_size: 'small',
-
-                                style_formats: [
-                                        {title: 'Bold text', inline: 'b'},
-                                        {title: 'Red text', inline: 'span', styles: {color: '#ff0000'}},
-                                        {title: 'Red header', block: 'h1', styles: {color: '#ff0000'}},
-                                        {title: 'Example 1', inline: 'span', classes: 'example1'},
-                                        {title: 'Example 2', inline: 'span', classes: 'example2'},
-                                        {title: 'Table styles'},
-                                        {title: 'Table row 1', selector: 'tr', classes: 'tablerow1'}
-                                ],
-
-                                templates: [
-                                        {title: 'Test template 1', content: 'Test 1'},
-                                        {title: 'Test template 2', content: 'Test 2'}
-                                ]
-                        });
-                        setTimeout(function(){console.log(tinyMCE.activeEditor.getContent())},3000);
-
+                  ul#chapters_hierarchy
                 .span3.right-column
                     .column-header
-                        | RIGHT
+                        | действия
+                    button#add_chapter_btn_load.btn Новая глава
+
+    script(type='text/javascript').
+      var add_chapter_json={};
+      var chapters_hierarchy=$('#chapters_hierarchy');
+      var chapters_json=[];
+      function reLoadHierarchy(callback){
+          chapters_hierarchy.empty();
+          $('#add_chapter_parentlist').empty();
+          $.post( "../admin/help-editor/chapter_hierarchy", {cmd:'get'}, function(data){
+            //console.log(JSON.stringify(data));
+            for(var i=0;i<data.length;++i){
+            chapters_json[data[i].id] = data[i];
+              addChapterToTree(data[i]);
+              $('#add_chapter_parentlist').append('<option'+ ' id="'+data[i].id+'"'+ '>'+data[i].name+'</option>');
+            }
+            if( typeof callback =='function'){callback();};
+          } );
+
+      }
+      function addChapterToTree(data){
+
+        console.log(data);
+        if(data.parent==null){
+          chapters_hierarchy.append('<ul id="'+data.id+'">'+data.name+'</ul>');
+        }else{
+          chapters_hierarchy.find('#'+data.parent).append('<ul id="'+data.id+'">'+data.name+'</ul>');
+        }
+      }
+      $(document).ready(function () {
+        reLoadHierarchy();
+        $('#add_chapter_btn_load').click(function () {
+          reLoadHierarchy();
+          $('#add_chapter_modal').modal();
+        });
+        $('#add_chapter_btn_save').click(function () {
+          add_chapter_json.parent = $('#add_chapter_parentlist option:selected').attr('id');
+          add_chapter_json.name = $('#add_chapter_name').val().trim();
+          add_chapter_json.cmd = 'set';
+          if(add_chapter_json.name.length==0){
+            alert('name must be NOT empty');
+            return;
+          }
+          console.log(JSON.stringify(add_chapter_json));
+          $.post( "../admin/help-editor/chapter_hierarchy", add_chapter_json, function(data){
+            $('#add_chapter_parentlist').val('');
+            $('#add_chapter_name').val('');
+            for(var i=0;i<data.length;++i){
+              addChapterToTree(data[i]);
+              chapters_json[data[i].id] = data[i];
+              $('#add_chapter_parentlist').append('<option'+ ' id="'+data[i].id+'"'+ '>'+data[i].name+'</option>');
+            }
+            $('#add_chapter_modal').modal('hide');
+          } );
+
+        });
+      });
+
+    #add_chapter_modal.modal.hide.fade
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body
+                label(for='add_chapter_parentlist') как подраздел
+                  select#add_chapter_parentlist(name='add_chapter_parentlist')
+                label(for='inputKey') название
+                  input#add_chapter_name(type='text', placeholder='')
+
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#add_chapter_btn_save.btn.btn-primary Save
