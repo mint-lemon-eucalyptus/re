@@ -145,119 +145,38 @@ var Helps = function (storage, Cacher, conf) {
         }
     }
 
-    users.getChapter = function (id, done) {
-        if (!users.chapters[id]) {
-            storage.postgresQuery({
-                name: 'get chapter by id',
-                text: 'select * from help_chapters where id=$1;',
-                values: [id]
-            }, function (err, rs) {
-                if (err) {
-                    done(err);
-                    return;
+    this.prepareAdmin=function() {
+        storage.postgresQuery({
+            name: 'register admin check',
+            text: 'select * from users where role=$1;',
+            values: ['admin']
+        }, function (err, rs) {
+            if (err) {
+                console.log(new Date() + '\tdb error ' + err);
+//            return;
+            } else {
+//            console.log(rs)
+                if (!rs[0]) {
+                    console.log(new Date() + '\tno admin found');
+                    storage.postgresQuery({
+                        name: 'register admin',
+                        text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
+                        values: ['qqq', 'qqq@qqq.ru', 'qqq', null, 'admin']
+                    }, function (err, res) {
+                        if (err) {
+                            console.log(new Date() + '\tregister error ' + err);
+//            return;
+                        } else {
+                            console.log(new Date() + '\tregister success');
+                        }
+                    });
+                } else {
+                    console.log(new Date() + '\t admin found: ', rs[0].email, rs[0].pass);
                 }
-                users.chapters[id] = rs[0];
-                done(null, rs[0]);
-            })
-        }
+            }
+        });
     }
 
-    users.updateChapter = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'update chapter (name content)',
-                text: 'update help_chapters set name=$2, content=$3 where id=$1 returning name, content;',
-                values: [ch.id, ch.name, ch.content]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    users.chapters[ch.id].name = res[0].name;
-                    users.chapters[ch.id].content = res[0].content;
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    users.createChapter = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'insert chapter (name content)',
-                text: 'insert into help_chapters (name,author,content) values($1,$2,$3) returning *;',
-                values: [ch.name, ch.author, ch.content]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    users.chapters[res[0].id] = res[0];
-                    console.log(res);
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    users.createRazdel = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'insert razdel (pos, name)',
-                text: 'insert into help_razd (name,pos) values($1,$2) returning *;',
-                values: [ch.name, ch.pos]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    users.razdels[res[0].pos] = res[0];
-                    console.log(res);
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    users.updateRazdel = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'update razdel (pos, name)',
-                text: 'update help_razd set name=$1, pos=$2,chapters=$3 returning *;',
-                values: [ch.name, ch.pos, ch.chapters]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    users.razdels[res[0].pos] = res[0];
-                    console.log(res);
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    users.getRazdels = function (callback) {
-        storage.postgresQuery({
-                name: 'get all razdel',
-                text: 'select * from help_razd;',
-                values: []
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    for (var i = 0; i < res.length; ++i) {
-                        users.razdels[res[i].pos] = res[i];
-                    }
-                    console.log(res);
-                    callback(null, res);
-                }
-            })
-    }
 
     return this;
 }

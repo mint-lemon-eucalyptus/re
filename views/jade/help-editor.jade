@@ -6,6 +6,7 @@ block content
             .page-header
                 h4 все статьи
         script(type='text/javascript', src="../plugins/tinymce/tinymce.min.js")
+        script(type='text/javascript', src="../plugins/tablesorter/jquery.tablesorter.min.js")
 
         #frames.container
             .row-fluid
@@ -17,15 +18,15 @@ block content
             #index.row-fluid
                 .span9.left-column.debug
                   h5 все статьи
-                  table
+                  table#sorting_table
                     thead
                       tr
-                        td id
-                        td position
-                        td title
-                        td author
-                        td date_created
-                        td is published
+                        th id
+                        th position
+                        th title
+                        th author
+                        th date_created
+                        th is published
                     tbody#chapters_table
                 .span3.debug
 
@@ -71,3 +72,5 @@ block content
 
 
     script(type='text/javascript', src="../admin/app.js")
+    script(type='text/javascript').
+      $('#sorting_table').tablesorter();

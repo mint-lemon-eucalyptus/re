@@ -1,10 +1,6 @@
 var Helps = function (storage) {
     var helps = this;
-    this.chapters = null;
-
-    this.chapters_loaded = false;
-
-    this.chapters_idxs = [];
+    this.chapters = [];
 
     this.chaptersAdmin = null;
 
@@ -19,19 +15,7 @@ var Helps = function (storage) {
                 return;
             }
             delete helps.chapters;
-            helps.chapters = {};
-            for (var i = 0; i < rs.length; ++i) {
-                helps.chapters[rs[i].id] = rs[i];
-                helps.chapters_idxs.push(rs[i].id);
-                helps.chapters[rs[i].id].pre = i + 1;
-            }
-            var cc = 1;
-            for (var i in helps.chapters) {
-                helps.chapters[i].pre = cc++;
-                helps.chapters_idxs.push(i);
-            }
-            helps.chapters_idxs.sort();
-            helps.chapters_loaded = true;
+            helps.chapters = rs;
             done(null, helps.chapters);
         })
     }
@@ -64,21 +48,29 @@ var Helps = function (storage) {
     }
 
 
-    helps.getChapter = function (id) {
-        return helps.chapters[id];
+    helps.getChapterByPos = function (pos) {
+        return helps.chapters[pos];
+    }
+    helps.getChapterById = function (id) {
+        for (var i = 0; i < this.chapters.length; ++i) {
+            if (this.chapters[i].id === id) {
+                return this.chapters[i];
+            }
+        }
+        return null;
     }
     helps.getChapterAdmin = function (id) {
         return helps.chaptersAdmin[id];
     }
 
     helps.updateChapter = function (ch, callback) {
-        console.log(ch)
-        if(ch.pos===''){
-            ch.pos=null;
+        if (ch.pos === '') {
+            ch.pos = null;
         }
+
         storage.postgresQuery({
                 name: 'update chapter (name content)',
-                text: 'update help_chapters set name=$2, content=$3, published=$4, pos=$5 where id=$1 returning *;',
+                text: "update help_chapters set name=$2, content=$3, published=$4, pos=$5 where id=$1 returning *;",
                 values: [ch.id, ch.name, ch.content, ch.published, ch.pos]
             },
             function (err, res) {
@@ -111,85 +103,6 @@ var Helps = function (storage) {
             })
     }
 
-    helps.getNextId = function (id) {
-        var c = helps.chapters_idxs[helps.chapters_idxs.indexOf(parseInt(id) + 1)];
-        console.log(c)
-        return (!c) ? null : c;
-    }
-    helps.generatePre = function (id) {
-        return helps.chapters[id].pre + '.';
-    }
-    helps.createRazdel = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'insert razdel (pos, name)',
-                text: 'insert into help_razd (name,pos) values($1,$2) returning *;',
-                values: [ch.name, ch.pos]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    helps.razdels[res[0].pos] = res[0];
-                    console.log(res);
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    helps.updateRazdel = function (ch, callback) {
-        storage.postgresQuery({
-                name: 'update razdel (pos, name)',
-                text: 'update help_razd set name=$1, pos=$2,chapters=$3 returning *;',
-                values: [ch.name, ch.pos, ch.chapters]
-            },
-            function (err, res) {
-                if (err) {
-                    console.log(err);
-                    callback([]);
-                }
-                else {
-                    helps.razdels[res[0].pos] = res[0];
-                    console.log(res);
-                    callback(null, res[0]);
-                }
-            })
-    }
-
-    helps.getRazdels = function (callback) {
-        if (!helps.razdels_loaded) {
-            storage.postgresQuery({
-                    name: 'get all razdel',
-                    text: 'select * from help_razd;',
-                    values: []
-                },
-                function (err, res) {
-                    if (err) {
-                        console.log(err);
-                        callback([]);
-                    }
-                    else {
-                        helps.razdels_loaded = true;
-                        helps.razdels = res;
-                        callback(null, helps.razdels);
-                    }
-                })
-        } else {
-            callback(null, helps.razdels)
-        }
-
-    }
-    this.canShowChapter = function (id) {
-        for (var i = 0; i < this.razdels.length; ++i) {
-            console.log(id, this.razdels[i].chapters, this.razdels[i].chapters.indexOf(id))
-            if (this.razdels[i].chapters.indexOf(parseInt(id)) >= 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 
     this.refresh = function () {
         this.reLoadChaptersForAdmin(function () {
@@ -202,53 +115,14 @@ var Helps = function (storage) {
     this.refresh();
 
 
-    this.asSql = function (done) {
+    this.asSql = function () {
         var a = this.chaptersAdmin;
+        var res = '';
         for (var i in a) {
-            console.log('info:  writing', i)
+            var text = "insert into help_chapters(id,name,author,content,pos,published) values(" + a[i].id + ',' + "'" + a[i].name + "'," + a[i].author + ",'" + a[i].content + "'," + a[i].pos + ',' + a[i].published + ');';
+            res += text.replace(/\n/g, '').replace(/insert into/gi, '\ninsert into');
         }
-
-        var fs = require('fs');
-        var writer = fs.createWriteStream('./sql/helps.sql', {encoding: 'utf-8', flags: 'w'});
-        writer.on('finish', function () {
-            console.error('Запись выполнена успешно.');
-        });
-
-        function write() {
-
-            var res = '';
-
-            for (var i in a) {
-                console.log('writing', i)
-                var text = "insert into help_chapters(id,name,author,content,pos,published) values(" + a[i].id + ',' + "'" + a[i].name + "'," + a[i].author + ",'" + a[i].content + "'," + a[i].pos + ',' + a[i].published + ');';
-
-                res += text;
-            }
-
-            console.log(res.substr(62,70))
-            var ok = writer.write(res);
-
-
-            if (!ok) {
-                console.log('not ok', i)
-
-                return;
-            }
-            writer.on('close', function () {
-                console.log('All done!');
-            });
-
-            writer.end('---==== Конец =====\n');
-
-        }
-
-       // writer.once('drain', write);
-        writer.write('\n');
-       write();
-
-
-        done();
-
+        return res;
     }
     return this;
 }

@@ -15,7 +15,9 @@ function reLoadChapters(callback) {
         for (var i in data) {
             addChapterToTable(data[i]);
         }
+        $('#sorting_table').tablesorter();
         if (typeof callback == 'function') {
+
             callback(data);
         }
         ;
@@ -77,7 +79,6 @@ function fillCombo(data, combo) {
 }
 
 $(document).ready(function () {
-    reLoadChapters();
 
     $('#add_chapter_btn_load').click(function () {
         Editor("textarea#add_chapter_content");

@@ -2,6 +2,7 @@
  * Module dependencies.
  */
 
+var fs = require('fs');
 var express = require('express');
 var http = require('http');
 var path = require('path');
@@ -24,7 +25,7 @@ var DBPASS = '12';
 
 
 var COOKIES_EXPIRE_SECS = 10060 * 60;
-var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000;
+var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000 / 70000;
 
 var mypg = new MyPG('localhost', DBNAME, DBUSER, DBPASS);
 var helps = new Helps(mypg);
@@ -36,15 +37,11 @@ users.get(23, function (user) {
 
 
 //return;
-mypg.prepareDataBase();
-setTimeout(function(){
-    helps.asSql(function(){
-        return;
-
-    });
-
-},2000)
-
+/*
+ setTimeout(function(){
+ helps.asSql(function(){  });
+ },2000)
+ */
 
 
 /*
@@ -110,63 +107,13 @@ function postgresQuery(q, callback) {
 var excercises = require('./excercises.js');
 var config = require('./config.js');
 
-function prepareDataBase() {
-
-
-    postgresQuery({
-        name: 'register admin check',
-        text: 'select * from users where role=$1;',
-        values: ['admin']
-    }, function (err, rs) {
-        if (err) {
-            console.log(new Date() + '\tdb error ' + err);
-//            return;
-        } else {
-//            console.log(rs)
-            if (!rs[0]) {
-                console.log(new Date() + '\tno admin found');
-                postgresQuery({
-                    name: 'register admin',
-                    text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
-                    values: ['qqq', 'qqq@qqq.ru', 'qqq', null, 'admin']
-                }, function (err, res) {
-                    if (err) {
-                        console.log(new Date() + '\tregister error ' + err);
-//            return;
-                    } else {
-                        console.log(new Date() + '\tregister success');
-                    }
-                });
-            } else {
-                console.log(new Date() + '\t admin found: ', rs[0].email, rs[0].pass);
-            }
-        }
-    });
-}
-
-prepareDataBase();
+users.prepareAdmin();
 
 var usersCache = new NodeCache();
 
-function loadChapterHierarchy(clbck) {
-    getChapterFullInfo(function (carr) {
-        clbck(carr);
-    })
-}
 
 var hierarchy = [];
-function reloadContent() {
-    loadChapterHierarchy(function (res) {
-        hierarchy = res;
-        hierarchy.forEach(function (e) {
-            loadChapterContent({id: e.id}, function (r) {
-                console.log(r);
-                e.content = r.content;
-            })
-        })
-    });
-}
-//reloadContent();
+
 var app = express();
 // all environments
 //var MemoryStore = require('connect/middleware/session/memory');
@@ -222,23 +169,6 @@ app.use(function (req, res, next) {
 app.locals.config = config;
 
 
-function getChapterFullInfo(callback) {
-    postgresQuery({
-            name: 'get user by id',
-            text: 'select h.id,h.name as name, h.dtcreated, h.pos, h.indent, u.email as author, u.id as uid from help_chapters h join users u on h.author=u.id order by h.pos;',
-            values: []
-        },
-        function (err, res) {
-            if (err) {
-                console.log(err);
-                callback([]);
-            }
-            else {
-                callback(res);
-            }
-        })
-}
-
 function getChapters(callback) {
     postgresQuery({
             name: 'get chapters info',
@@ -273,24 +203,6 @@ function loadChapterContent(json, callback) {
         })
 }
 
-function updateChapter(ch, callback) {
-    postgresQuery({
-            name: 'update chapter (name content)',
-            text: 'update help_chapters set name=$2, content=$3 where id=$1;',
-            values: [ch.id, ch.name, ch.content]
-        },
-        function (err, res) {
-            if (err) {
-                console.log(err);
-                callback([]);
-            }
-            else {
-                reloadContent();
-                callback(res[0]);
-            }
-        })
-}
-
 
 // development only
 if ('development' == app.get('env')) {
@@ -312,7 +224,7 @@ app.get('/', function (req, res) {
     var p = req.cookies.p;  //pass
     var n = req.cookies.n;  //username
     var id = req.cookies.i;  //user id
-    var role = req.cookies.role;
+    var role = req.session.role;
     console.log('role:  ', role, id)
     if (!res.locals.session.userid) {
         res.render('index');
@@ -346,19 +258,15 @@ app.get('/', function (req, res) {
 //stats
 app.get('/help', function (req, res) {
     var userid = req.session.userid;
-    helps.getRazdels(function (err, rs) {
-//    console.log('help_index2',rs)
-
-        res.render('help_index', {razd: rs, chapters: helps.getChaptersForUser()})
-    });
+    res.render('help_index', {chapters: helps.getChaptersForUser()})
 });
 app.get('/help/:id', function (req, res) {
-    var chapter = helps.getChapter(req.params.id);
-        if (chapter) {
-            res.render('help_chapter', {chapters: helps.getChaptersForUser(), active: req.params.id, next: helps.getNextId(req.params.id), pre: helps.generatePre(req.params.id)})
-        } else {
-            res.redirect('403');
-        }
+    var chapter = helps.getChapterByPos(req.params.id);
+    if (chapter) {
+        res.render('help_chapter', {chapters: helps.getChaptersForUser(), active: req.params.id})
+    } else {
+        res.redirect('403');
+    }
 });
 
 
@@ -416,28 +324,11 @@ app.get('/admin', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
     var userid = req.session.userid;
+    console.log(l, p, userid, req.session.role)
     if (userid) {
         users.admin(userid, l, p, function (user) {
             if (user && user.pass == p && user.email == l) {
                 res.render('admin', {path: 'admin'});
-            } else {
-                clearAllCookies(res)
-                res.redirect('403');
-            }
-        })
-    } else {
-        res.redirect('403');
-    }
-});
-
-app.get('/admin/help-editor', function (req, res) {
-    var l = req.cookies.l;  //email
-    var p = req.cookies.p;  //pass
-    var userid = req.session.userid;
-    if (userid) {
-        users.admin(userid, l, p, function (user) {
-            if (user && user.pass == p && user.email == l) {
-                res.render('help-editor', {});
             } else {
                 clearAllCookies(res)
                 res.redirect('403');
@@ -477,7 +368,7 @@ app.post('/admin/chapters', function (req, res) {
                     }
                     case 'edit':
                     {
-                        helps.updateChapter(json, function (chapter) {
+                        helps.updateChapter(json, function (err, chapter) {
                             res.send(chapter);
                         });
                         return;
@@ -485,11 +376,11 @@ app.post('/admin/chapters', function (req, res) {
                 }
             } else {
                 clearAllCookies(res)
-                res.redirect('403');
+                res.send({cmd: 'fuck_you'});
             }
         })
     } else {
-        res.redirect('403');
+        res.send({cmd: 'fuck_you'});
     }
 });
 
@@ -513,7 +404,7 @@ app.post('/user', function (req, res) {
                     }
                     case 'content':
                     {
-                        helps.getChapter(json.id, function (err, chaptersArr) {
+                        helps.getChapterById(json.id, function (err, chaptersArr) {
                             console.log(chaptersArr)
                             res.send(chaptersArr);
                         });
@@ -592,7 +483,7 @@ app.post('/admin/index', function (req, res) {
             }
         } else {
             clearAllCookies(res)
-            res.render('403');
+            res.send({cmd: 'fuck_you'});
         }
     })
 });
@@ -792,6 +683,20 @@ app.get('/cache-stats', function (req, res) {
     res.send(usersCache.getStats());
 });
 
+app.get('/helps/sql', function (req, res) {
+//    res.contentType('text/plain');
+
+    var writer = fs.createWriteStream('./sql/helps.sql', {encoding: 'utf-8', flags: 'w'});
+    var ok = writer.write(helps.asSql());
+    writer.on('close', function () {
+        console.log('All done!');
+        res.sendfile('./sql/helps.sql');
+    });
+
+    writer.end('\n---==== Конец =====\n');
+
+//    res.sendfile('sql/helps.sql')
+});
 
 function db_name(req, res) {
     var t = '';

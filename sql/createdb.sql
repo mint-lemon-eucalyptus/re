@@ -67,39 +67,3 @@ CREATE TABLE help_chapters
 GRANT ALL ON TABLE help_chapters TO auth_client;
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE help_chapters TO auth_client;
 GRANT USAGE ON SEQUENCE help_chapters_id_seq TO auth_client;
-
-DROP TABLE help_razd;
-CREATE TABLE help_razd
-(
-  pos        SERIAL                   NOT NULL,
-  name      TEXT,
-  chapters json,
-  CONSTRAINT help_razd_pkey PRIMARY KEY (pos)
-);
-GRANT ALL ON TABLE help_razd TO auth_client;
-GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE help_razd TO auth_client;
-GRANT USAGE ON SEQUENCE help_razd_pos_seq TO auth_client;
-
-
-
---add chapter
-DROP FUNCTION IF EXISTS add_chapter( INT, TEXT, INT ) CASCADE;
-CREATE FUNCTION add_chapter(_parent INT, _name TEXT, _author INT)
-  RETURNS TABLE(id INT, dtcreated TIMESTAMP WITH TIME ZONE, author INTEGER, name TEXT, parent INT)
-LANGUAGE PLPGSQL AS $$
-BEGIN
-  RETURN QUERY INSERT INTO help_chapters (name, author, parent) VALUES (_name, _author, _parent)
-RETURNING help_chapters.*;
-END
-$$;
-
-DROP FUNCTION IF EXISTS move_chapter( INT, INT ) CASCADE;
-CREATE FUNCTION move_chapter(_what INT, _to INT)
-  RETURNS VOID LANGUAGE PLPGSQL AS $$
-BEGIN
-  UPDATE help_chapters
-  SET parent=_to
-  WHERE id = _what;
-END
-$$;
-

@@ -12,11 +12,11 @@ block content
                   ul
                         .row-fluid
                         - var counter=1;
-                        - for(var i in chapters){
+                        - for(var i = 0;i<chapters.length;++i){
                           ul
                             .row-fluid
                               h4
-                                a(href="/help/#{chapters[i].id}")
+                                a(href="/help/#{i}")
                                   | #{counter++}. #{chapters[i].name}
                         - }
               .span2.debug
