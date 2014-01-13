@@ -1,14 +1,74 @@
 extends admin-layout.jade
 
+
 block content
     .content
         .container
             .page-header
-                h4 главная страница - админка
-        #frames.container(style='min-height:900px;')
-            #index.row-fluid
-                .span12.left-column.debug
-                    .column-header.debug
-                        p help admin content
-                    p help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin help admin
+                h4 все статьи
+        script(type='text/javascript', src="../plugins/tinymce/tinymce.min.js")
 
+        #frames.container
+            .row-fluid
+                .span10.right-column
+                    button#add_chapter_btn_load.btn Новая статья
+                    button#edit_chapter_btn_load.btn редактировать
+                    button#reload_hierarchy.btn.btn-primary.pull-right обновить
+            hr
+            #index.row-fluid
+                .span9.left-column.debug
+                  h5 все статьи
+                  table
+                    thead
+                      tr
+                        td id
+                        td position
+                        td title
+                        td author
+                        td date_created
+                        td is published
+                    tbody#chapters_table
+                .span3.debug
+
+
+
+
+    #add_chapter_modal.modal.hide.fade.fullscreen
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body(style='  height: 90%; min-height:90%')
+                label(for='inputKey') название
+                  input#add_chapter_name(type='text', placeholder='')
+                label(for='add_pub') опубликовать
+                  input#add_pub(type="checkbox")
+                label(for='add_chapter_content') текст
+                  form(action='')
+                    textarea#add_chapter_content(name='content', style='width: 100%;  height: 90%;')
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#add_chapter_btn_save.btn.btn-primary Save
+
+    #edit_chapter_modal.modal.hide.fade.fullscreen
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 редактировать статью
+          .modal-body(style='  height: 90%; min-height:400px')
+                label(for='edit_what_list') выбор статьи
+                  select#edit_what_list(style='width:60%;')
+                label(for='edit_what_name') новое имя
+                  input#edit_what_name(style='width:60%')
+                label(for='edit_what_pos') position
+                  input#edit_what_pos(style='width:60%')
+                label(for='edit_pub') опубликовать
+                  input#edit_pub(type="checkbox")
+                label(for='edit_chapter_content') текст
+                  form()
+                    textarea#edit_chapter_content(name='content', style='width: 100%;')
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#edit_chapter_btn_save.btn.btn-primary Save
+
+
+
+    script(type='text/javascript', src="../admin/app.js")

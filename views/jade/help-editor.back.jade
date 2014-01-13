@@ -1,0 +1,158 @@
+extends admin-layout.jade
+
+block content
+    .content
+        .container
+            .page-header
+                h4 Select queries
+        script(type='text/javascript', src="../plugins/tinymce/tinymce.min.js")
+        #frames.container
+            #index.row-fluid
+                .span9.left-column.debug
+                  ul#chapters_hierarchy
+                .span3.right-column
+                    .column-header
+                        | действия
+                    button#add_chapter_btn_load.btn Новая глава
+                    button#move_chapter_btn_load.btn переместить главу
+                    button#edit_chapter_btn_load.btn Редактировать главу
+
+    script(type='text/javascript').
+      var chapters_hierarchy=$('#chapters_hierarchy');
+      var chapters_json=[];
+      function reLoadHierarchy(callback){
+          chapters_hierarchy.empty();
+          $('#add_chapter_parentlist').empty();
+          $.post( "../admin/help-editor/chapter_hierarchy", {cmd:'get'}, function(data){
+            //console.log(JSON.stringify(data));
+            for(var i=0;i<data.length;++i){
+              chapters_json[data[i].id] = data[i];
+              addChapterToTree(data[i]);
+            }
+            if( typeof callback =='function'){callback(data);};
+          } );
+
+      }
+      function addChapterToTree(data){
+
+        console.log(data);
+        if(data.parent==null){
+          chapters_hierarchy.append('<ul id="'+data.id+'">'+data.name+'</ul>');
+        }else{
+          chapters_hierarchy.find('#'+data.parent).append('<ul id="'+data.id+'">'+data.name+'</ul>');
+        }
+      }
+      $(document).ready(function () {
+        function fillCombo(data, combo){
+          for(var i=0;i<data.length;++i){
+            combo.append('<option'+ ' id="'+data[i].id+'"'+ '>'+data[i].name+'</option>');
+          }
+        }
+
+        reLoadHierarchy(function(data){
+          fillCombo(data, $('#add_chapter_parentlist'));
+        });
+
+        $('#add_chapter_btn_load').click(function () {
+          reLoadHierarchy(function(data){
+                                    fillCombo(data, $('#add_chapter_parentlist'));
+                                  });
+          $('#add_chapter_modal').modal();
+        });
+        $('#add_chapter_btn_save').click(function () {
+          var chapter_json={};
+          chapter_json.parent = $('#add_chapter_parentlist option:selected').attr('id');
+          chapter_json.name = $('#add_chapter_name').val().trim();
+          chapter_json.cmd = 'set';
+          if(chapter_json.name.length==0){
+            alert('name must be NOT empty');
+            return;
+          }
+          console.log(JSON.stringify(chapter_json));
+          $.post( "../admin/help-editor/chapter_hierarchy", chapter_json, function(data){
+            $('#add_chapter_parentlist').val('');
+            $('#add_chapter_name').val('');
+            for(var i=0;i<data.length;++i){
+              addChapterToTree(data[i]);
+              chapters_json[data[i].id] = data[i];
+              $('#add_chapter_parentlist').append('<option'+ ' id="'+data[i].id+'"'+ '>'+data[i].name+'</option>');
+            }
+            $('#add_chapter_modal').modal('hide');
+          } );
+
+        });
+
+        $('#move_chapter_btn_load').click(function () {
+          reLoadHierarchy(function(data){
+                                    fillCombo(data, $('#move_what_list'));
+                                    fillCombo(data, $('#move_to_list'));
+                                  });
+          $('#move_chapter_modal').modal();
+        });
+        $('#move_chapter_btn_save').click(function () {
+          var jj = {
+            what : $('#move_what_list option:selected').attr('id'),
+            to : $('#move_to_list option:selected').attr('id'),
+            cmd: 'set'
+          };
+          if(!jj.what || !jj.what){
+            alert('must be selected');
+            return;
+          }
+          console.log(JSON.stringify(jj));
+          $.post( "../admin/help-editor/chapter_move", jj, function(data){
+            $('#move_what_list').val('');
+            $('#move_to_list').val('');
+            chapters_hierarchy.empty();
+            reLoadHierarchy(function(data){
+              fillCombo(data, $('#add_chapter_parentlist'));
+            });
+            $('#move_chapter_modal').modal('hide');
+          } );
+
+        });
+
+
+      });
+
+
+    #add_chapter_modal.modal.hide.fade
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body
+                label(for='add_chapter_parentlist') как подраздел
+                  select#add_chapter_parentlist(name='add_chapter_parentlist')
+                label(for='inputKey') название
+                  input#add_chapter_name(type='text', placeholder='')
+
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#add_chapter_btn_save.btn.btn-primary Save
+
+    #move_chapter_modal.modal.hide.fade
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body
+                label(for='move_what_list') что переместить
+                  select#move_what_list(name='add_chapter_parentlist')
+                label(for='move_to_list') в раздел
+                  select#move_to_list(name='add_chapter_parentlist')
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#move_chapter_btn_save.btn.btn-primary Save
+
+    #edit_chapter_modal.modal.hide.fade
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body
+                label(for='add_chapter_parentlist') как подраздел
+                  select#add_chapter_parentlist(name='add_chapter_parentlist')
+                label(for='inputKey') название
+                  input#add_chapter_name(type='text', placeholder='')
+
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#add_chapter_btn_save.btn.btn-primary Save

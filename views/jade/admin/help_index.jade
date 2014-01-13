@@ -1,0 +1,226 @@
+
+block content
+    .content
+        .container
+            .page-header
+                h4 все статьи
+        script(type='text/javascript', src="../plugins/tinymce/tinymce.min.js")
+        #frames.container
+            .row-fluid
+                .span10.right-column
+                    button#add_chapter_btn_load.btn Новая статья
+                    button#edit_chapter_btn_load.btn редактировать
+                    button#reload_hierarchy.btn.btn-primary.pull-right обновить
+            hr
+            #index.row-fluid
+                .span9.left-column.debug
+                  h5 все статьи
+                  table
+                    thead
+                      tr
+                        td id
+                        td title
+                        td author
+                        td date_created
+                    tbody#chapters_table
+                .span3.debug
+
+    script(type='text/javascript').
+      var chapters=[];
+            var chapters_table=$('#chapters_table');
+            var chapters=[];
+
+      function loadUser(id,callback){
+          $.post( "../user",{id:id}, function(data){
+            console.log(JSON.stringify(data));
+            callback(data);
+          } );
+      }
+
+      function reLoadChapters(callback){
+          $.post( "../admin/chapters", {cmd:'get'}, function(data){
+            console.log(JSON.stringify(data));
+            chapters_table.empty();
+            for(var i=0;i<data.length;++i){
+            console.log(JSON.stringify(data[i]));
+                       addChapterToTable(data[i]);
+            }
+            if( typeof callback =='function'){callback(data);};
+          } );
+      }
+      function addChapterToTable(data,user){
+        function row(dt){
+        var oper = $('<p>asda</p>');
+        var r = $('<tr>').attr('id',data.id).append($('<td>'+dt.id+'</td>')).append($('<td>'+dt.name+'</td>')).append($('<td>'+data.author+'</td>')).append($('<td>'+dt.dtcreated+'</td>'))
+        return r;
+        }
+              chapters_table.append(row(data));
+      }
+      function Editor(selector){
+                            tinymce.init({
+                                    mode: "specific_textareas",
+                                    selector: selector,
+                                    plugins: [
+                                            "advlist autolink link image lists charmap print preview hr anchor pagebreak spellchecker",
+                                            "searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking",
+                                            "table contextmenu directionality emoticons template textcolor paste textcolor"
+                                    ],
+                                    toolbar1: "newdocument | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | styleselect formatselect fontselect fontsizeselect",
+                                    toolbar2: "cut copy paste | searchreplace | bullist numlist | outdent indent blockquote | undo redo | link unlink anchor image media code | inserttime preview | forecolor backcolor",
+                                    toolbar3: "table | hr reeditformat | subscript superscript | charmap emoticons | print fullscreen | ltr rtl | spellchecker | visualchars visualblocks nonbreaking template pagebreak restoredraft",
+                                    menubar: false,
+                                    toolbar_items_size: 'small',
+                                    style_formats: [
+                                            {title: 'Bold text', inline: 'b'},
+                                            {title: 'Red text', inline: 'span', styles: {color: '#ff0000'}},
+                                            {title: 'Red header', block: 'h1', styles: {color: '#ff0000'}},
+                                            {title: 'Example 1', inline: 'span', classes: 'example1'},
+                                            {title: 'Example 2', inline: 'span', classes: 'example2'},
+                                            {title: 'Table styles'},
+                                            {title: 'Table row 1', selector: 'tr', classes: 'tablerow1'}
+                                    ],
+                                    templates: [
+                                            {title: 'Test template 1', content: 'Test 1'},
+                                            {title: 'Test template 2', content: 'Test 2'}
+                                    ]
+                            });
+      }
+      function fillCombo(data, combo){
+        combo.empty();
+        for(var i=0;i<data.length;++i){
+          if(data[i].id!==1){
+            combo.append('<option'+ ' id="'+data[i].id+'"'+ '>'+data[i].name+'</option>');
+          }
+        }
+      }
+
+      $(document).ready(function () {
+        reLoadChapters();
+
+        $('#add_chapter_btn_load').click(function () {
+          Editor("textarea#add_chapter_content");
+          $('#add_chapter_modal').modal();
+        });
+        $('#add_chapter_btn_save').click(function () {
+          var chapter_json={};
+          chapter_json.name = $('#add_chapter_name').val().trim();
+          chapter_json.cmd = 'add';
+          chapter_json.content = tinyMCE.get('add_chapter_content').getContent();
+          if(chapter_json.name.length==0){
+            alert('name must be NOT empty');
+            return;
+          }
+          $.post( "../admin/chapters", chapter_json, function(data){
+            tinyMCE.get('add_chapter_content').setContent('');
+            $('#add_chapter_name').val('');
+            reLoadChapters();
+
+            $('#add_chapter_modal').modal('hide');
+          } );
+        });
+
+        $('#edit_chapter_btn_load').click(function () {
+          Editor("textarea#edit_chapter_content");
+          reLoadChapters(function(data){
+            fillCombo(data, $('#edit_what_list'));
+          });
+          $('#edit_chapter_modal').modal();
+        });
+        $('#edit_chapter_btn_save').click(function () {
+          var jj = {
+            id : $('#edit_what_list option:selected').attr('id'),
+            name : $('#edit_what_name').val(),
+            content : tinyMCE.get('edit_chapter_content').getContent(),
+            cmd: 'edit'
+          };
+          console.log(JSON.stringify(jj));
+          if(!jj.name.length&&!jj.content.length){
+            alert('надо что-то изменить');
+            return;
+          }
+          if(!jj.name.length){
+            jj.name=$('#edit_what_list option:selected').text();
+          }
+
+          $.post( "../admin/chapters", jj, function(data){
+            $('#edit_what_name').val('');
+                    reLoadChapters();
+
+            $('#edit_chapter_modal').modal('hide');
+          } );
+
+        });
+
+
+
+      });
+
+
+    #add_chapter_modal.modal.hide.fade.fullscreen
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 Добавление новой главы
+          .modal-body(style='  height: 90%; min-height:90%')
+                label(for='inputKey') название
+                  input#add_chapter_name(type='text', placeholder='')
+                label(for='add_chapter_content') текст
+                  form(action='')
+                    textarea#add_chapter_content(name='content', style='width: 100%;  height: 90%;')
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#add_chapter_btn_save.btn.btn-primary Save
+
+    #edit_chapter_modal.modal.hide.fade.fullscreen
+        .modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') ×
+            h3 редактировать статью
+          .modal-body(style='  height: 90%; min-height:400px')
+                label(for='edit_what_list') выбор статьи
+                  select#edit_what_list(style='width:60%;')
+                label(for='edit_what_name') новое имя
+                  input#edit_what_name(style='width:60%')
+                label(for='edit_chapter_content') текст
+                  form()
+                    textarea#edit_chapter_content(name='content', style='width: 100%;')
+          .modal-footer
+            a.btn(href='#', data-dismiss='modal') Close
+            button#edit_chapter_btn_save.btn.btn-primary Save
+    script(type='text/javascript').
+
+      $(document).ready(function () {
+      $('#edit_what_list').change(function(e) {
+        console.log(chapters);
+          var itemId=  $('#edit_what_list option:selected').attr('id');
+          console.log(itemId);
+            var json = {
+              id:$('#edit_what_list option:selected').attr('id'),
+              cmd:'content'
+            };
+            $.post( "../admin/chapters", json, function(data){
+            console.log(JSON.stringify(data));
+              tinyMCE.get('edit_chapter_content').setContent(data.content);
+            } );
+      });
+      });
+
+
+        function refresh(){
+                          reLoadChapters();
+        }
+        function addChapterToTree(data){
+        }
+
+
+        $(document).ready(function () {
+        refresh();
+              $('#show_index_modal').click(function () {
+                refresh();
+                $('#edit_index_modal').modal();
+              });
+
+              $('#reload_hierarchy').click(function(e) {
+                refresh();
+              })
+        });
+
+

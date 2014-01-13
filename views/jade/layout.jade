@@ -12,6 +12,7 @@ html
     link(rel='stylesheet', href='/stylesheets/font-awesome-ie7.css')
     link(rel='stylesheet', href='/stylesheets/layout.css')
 
+
   body
     header
       .navbar.navbar-fixed-top
@@ -25,26 +26,26 @@ html
               .nav-collapse.collapse
                 ul.nav.pull-right
                   li
-                    a(href="../help") Помощь
+                    a(href="../help") Справочные разделы
                   li
                     a(href="../excercises") Задачи
-                  if !session.auth
+                  if !session.userid
                     li
                       a(href="../sign_in") Вход
                     li
                       a(href="../sign_up") Регистрация
                   else
                     li.dropdown
-                      a(href="#", class="dropdown-toggle", data-toggle="dropdown") #{user.name}
+                      a(href="#", class="dropdown-toggle", data-toggle="dropdown") #{session.username}
                         b.caret
                       ul.dropdown-menu
                         li.nav-header ПРОФИЛЬ
                         li
-                          a(href="../user/#{user.id}")=user.name
+                          a(href="../user/#{session.userid}")=session.username
                         li
                           a(href="../logout") Выход
                     - console.log(role);
-                    if(role=='admin')
+                    if(session.role=='admin')
                       li
                         a(href="../admin") admin
 

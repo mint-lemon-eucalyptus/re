@@ -7,16 +7,17 @@ block content
           .span10.debug
               .page-header
               - var chapter = chapters[active];
-                h3 #{pre} #{chapter.name}
+                h3 #{chapter.pos} #{chapter.title}
               .row-fluid
-                .chapter-content.debug(style='padding-right:3em')
+                .span8.offset1.chapter-content.debug
                   p !{chapter.content}
               .row-fluid
-                if(next)
+                h1 #{++active}
+                if(active<(chapters.length))
                   .span8.offset1.chapters-next.debug
-                    h1 #{active} #{(chapters.length)}
+                    //h1 #{chapter.id} #{(chapters.length)}
                     h5 Следующая статья:
                       ul
                         li
-                          a(href='../help/#{next}') #{chapters[next].name}
+                          a(href='../order/#{active}') #{chapters[active].title}
           .span2.debug

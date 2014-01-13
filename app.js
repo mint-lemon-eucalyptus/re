@@ -11,14 +11,42 @@ var nodemailer = require("nodemailer");
 var util = require('util');
 var pg = require('pg');
 
-var COOKIES_EXPIRE_SECS = 60 * 60;
-var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000;
+var NodeCache = require("node-cache");
+
+var MyPG = require('./class/postgres.js');
+var Helps = require('./class/helps.js');
+var Users = require('./class/users.js');
 
 
-var LOCAL = true;
 var DBNAME = 'testing';
 var DBUSER = 'auth_user';
 var DBPASS = '12';
+
+
+var COOKIES_EXPIRE_SECS = 10060 * 60;
+var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000;
+
+var mypg = new MyPG('localhost', DBNAME, DBUSER, DBPASS);
+var helps = new Helps(mypg);
+var users = new Users(mypg, NodeCache, {COOKIE_EXPIRE_TIME: COOKIES_EXPIRE});
+
+users.get(23, function (user) {
+    console.log(user)
+})
+
+
+//return;
+mypg.prepareDataBase();
+
+
+/*
+ helps.updateRazdel({name:'sdasd',pos:1,chapters:'[11,15,13,16]'},function(err,rs){
+ console.log(rs)
+ })
+ */
+
+
+var LOCAL = true;
 var neo4j = require('neo4j-js');
 
 function execCypherQuery(query_, callback) {
@@ -74,8 +102,6 @@ function postgresQuery(q, callback) {
 var excercises = require('./excercises.js');
 var config = require('./config.js');
 
-var helps = require('./helps.js');
-
 function prepareDataBase() {
 
 
@@ -112,11 +138,27 @@ function prepareDataBase() {
 
 prepareDataBase();
 
-var NodeCache = require("node-cache");
 var usersCache = new NodeCache();
-var chaptersCache = new NodeCache();
 
+function loadChapterHierarchy(clbck) {
+    getChapterFullInfo(function (carr) {
+        clbck(carr);
+    })
+}
 
+var hierarchy = [];
+function reloadContent() {
+    loadChapterHierarchy(function (res) {
+        hierarchy = res;
+        hierarchy.forEach(function (e) {
+            loadChapterContent({id: e.id}, function (r) {
+                console.log(r);
+                e.content = r.content;
+            })
+        })
+    });
+}
+//reloadContent();
 var app = express();
 // all environments
 //var MemoryStore = require('connect/middleware/session/memory');
@@ -128,7 +170,7 @@ app.use(express.favicon());
 app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.cookieParser('1234567890QWERTY'));
+app.use(express.cookieParser('124567890QWERTY'));
 app.use(express.cookieSession({
     secret: 'secret',
     cookie: {maxAge: COOKIES_EXPIRE}
@@ -171,10 +213,11 @@ app.use(function (req, res, next) {
 
 app.locals.config = config;
 
-function getChapters(callback) {
+
+function getChapterFullInfo(callback) {
     postgresQuery({
-            name: 'get chapters info',
-            text: 'select * from help_chapters;',
+            name: 'get user by id',
+            text: 'select h.id,h.name as name, h.dtcreated, h.pos, h.indent, u.email as author, u.id as uid from help_chapters h join users u on h.author=u.id order by h.pos;',
             values: []
         },
         function (err, res) {
@@ -187,11 +230,12 @@ function getChapters(callback) {
             }
         })
 }
-function addChapter(ch, callback) {
+
+function getChapters(callback) {
     postgresQuery({
-            name: 'add new chapter',
-            text: 'select * from add_chapter($1,$2,$3);',
-            values: [ch.parent, ch.name, ch.author]
+            name: 'get chapters info',
+            text: 'select id,name,pos,author,dtcreated from help_chapters order by pos;',
+            values: []
         },
         function (err, res) {
             if (err) {
@@ -203,6 +247,43 @@ function addChapter(ch, callback) {
             }
         })
 }
+
+function loadChapterContent(json, callback) {
+    postgresQuery({
+            name: 'get chapters content',
+            text: 'select content from help_chapters where id=$1;',
+            values: [json.id]
+        },
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                callback([]);
+            }
+            else {
+                callback(res[0]);
+            }
+        })
+}
+
+function updateChapter(ch, callback) {
+    postgresQuery({
+            name: 'update chapter (name content)',
+            text: 'update help_chapters set name=$2, content=$3 where id=$1;',
+            values: [ch.id, ch.name, ch.content]
+        },
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                callback([]);
+            }
+            else {
+                reloadContent();
+                callback(res[0]);
+            }
+        })
+}
+
+
 // development only
 if ('development' == app.get('env')) {
     app.use(express.errorHandler());
@@ -225,21 +306,51 @@ app.get('/', function (req, res) {
     var id = req.cookies.i;  //user id
     var role = req.cookies.role;
     console.log('role:  ', role, id)
-    var bean = {role: role};
-    if (!res.locals.session.auth || !l || !p || !n) {
+    if (!res.locals.session.userid) {
         res.render('index');
+        return;
+    }
+    if (!l || !p || !n) {
+        users.get(res.locals.session.userid, function (user) {
+            res.cookie('i', user.id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('l', user.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('p', user.pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.cookie('n', user.name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
+            res.render('index');
+        })
     } else {
         authByEmailPass(l, p, function (user) {
             if (user) {
-                res.locals.session.auth = true;
+                res.locals.session.userid = user.id;
+                res.locals.session.role = user.role;
+                res.locals.session.username = user.name;
+
                 res.locals.user = user;
-                res.render('index', bean);
+                res.render('index');
             } else {
                 clearAllCookies(res);
                 res.render('index');
             }
         })
     }
+});
+
+//stats
+app.get('/help', function (req, res) {
+    var userid = req.session.userid;
+    helps.getRazdels(function (err, rs) {
+//    console.log('help_index2',rs)
+
+        res.render('help_index', {razd: rs, chapters: helps.getChaptersForUser()})
+    });
+});
+app.get('/help/:id', function (req, res) {
+    var chapter = helps.getChapter(req.params.id);
+        if (chapter) {
+            res.render('help_chapter', {chapters: helps.getChaptersForUser(), active: req.params.id, next: helps.getNextId(req.params.id), pre: helps.generatePre(req.params.id)})
+        } else {
+            res.redirect('403');
+        }
 });
 
 
@@ -288,60 +399,188 @@ function auth(req, callback) {
     authByEmailPass(req.cookies.l, req.cookies.p, callback)
 }
 
-function to404(req, res) {
-    res.redirect('404')
-}
 function to403(req, res) {
     res.redirect('403')
 }
 
+
 app.get('/admin', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
-    console.log('/admin', l, p)
-    authByEmailPass(l, p, function (user) {
-        if (user && user.role == 'admin') {
-            res.render('admin', {path: 'admin'});
-        } else {
-            clearAllCookies(res)
-            res.render('403');
-        }
-    })
+    var userid = req.session.userid;
+    if (userid) {
+        users.admin(userid, l, p, function (user) {
+            if (user && user.pass == p && user.email == l) {
+                res.render('admin', {path: 'admin'});
+            } else {
+                clearAllCookies(res)
+                res.redirect('403');
+            }
+        })
+    } else {
+        res.redirect('403');
+    }
 });
 
 app.get('/admin/help-editor', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
-    console.log(l, p)
-    authByEmailPass(l, p, function (user) {
-        if (user && user.role == 'admin') {
-            res.render('help-editor', {});
-        } else {
-            clearAllCookies(res)
-            res.render('403');
-        }
-    })
+    var userid = req.session.userid;
+    if (userid) {
+        users.admin(userid, l, p, function (user) {
+            if (user && user.pass == p && user.email == l) {
+                res.render('help-editor', {});
+            } else {
+                clearAllCookies(res)
+                res.redirect('403');
+            }
+        })
+    } else {
+        res.redirect('403');
+    }
 });
 
-app.post('/admin/help-editor/chapter_hierarchy', function (req, res) {
+app.post('/admin/chapters', function (req, res) {
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    var json = req.body;
+    var userid = req.session.userid;
+    if (userid) {
+        users.admin(userid, l, p, function (user) {
+            if (user) {
+                json.author = user.id;
+                switch (json.cmd) {
+                    case 'get':
+                    {
+                        res.send(helps.getChaptersForAdmin());
+                        return;
+                    }
+                    case 'content':
+                    {
+                        res.send(helps.getChapterAdmin(json.id));
+                        return;
+                    }
+                    case 'add':
+                    {
+                        helps.createChapter(json, function (chaptersArr) {
+                            res.send(chaptersArr);
+                        });
+                        return;
+                    }
+                    case 'edit':
+                    {
+                        helps.updateChapter(json, function (chapter) {
+                            res.send(chapter);
+                        });
+                        return;
+                    }
+                }
+            } else {
+                clearAllCookies(res)
+                res.redirect('403');
+            }
+        })
+    } else {
+        res.redirect('403');
+    }
+});
+
+//login
+app.post('/user', function (req, res) {
+    var l = req.cookies.l;  //email
+    var p = req.cookies.p;  //pass
+    var json = req.body;
+    var userid = req.session.userid;
+    if (userid) {
+        users.admin(userid, l, p, function (user) {
+            if (user && user.role == 'admin' && user.pass == p && user.email == l) {
+                json.author = user.id;
+                switch (json.cmd) {
+                    case 'get':
+                    {
+                        users.get(json.id, function (usr) {
+                            res.send(usr);
+                        });
+                        return;
+                    }
+                    case 'content':
+                    {
+                        helps.getChapter(json.id, function (err, chaptersArr) {
+                            console.log(chaptersArr)
+                            res.send(chaptersArr);
+                        });
+                        return;
+                    }
+                    case 'add':
+                    {
+                        helps.createChapter(json, function (chaptersArr) {
+                            res.send(chaptersArr);
+                        });
+                        return;
+                    }
+                    case 'edit':
+                    {
+                        helps.updateChapter(json, function (chapter) {
+                            res.send(chapter);
+                        });
+                        return;
+                    }
+                }
+            } else {
+                clearAllCookies(res)
+                res.redirect('403');
+            }
+        })
+    } else {
+        res.redirect('403');
+    }
+});
+
+
+app.post('/admin/index', function (req, res) {
     var l = req.cookies.l;  //email
     var p = req.cookies.p;  //pass
     var json = req.body;
     console.log('req.body', json);
     authByEmailPass(l, p, function (user) {
         if (user && user.role == 'admin') {
-            if (json.cmd === 'set') {
-                addChapter({
-                    name: json.name,
-                    author: user.id,
-                    parent: json.parent
-                },function(result){
-                    res.send(result);
-                })
-            } else {
-                getChapters(function (chaptersArr) {
-                    res.send(chaptersArr);
-                })
+            json.author = user.id;
+            switch (json.cmd) {
+                case 'get':
+                {
+                    getChapters(function (chaptersArr) {
+                        res.send(chaptersArr);
+                    });
+                    return;
+                }
+                case 'content':
+                {
+                    loadChapterContent(json, function (chaptersArr) {
+                        res.send(chaptersArr);
+                    });
+                    return;
+                }
+                case 'bind':
+                {
+                    if (!json.chapter) {
+                        res.send([]);
+                        return;
+                    }
+                    if (json.parent === 'null') {
+                        json.parent = null;
+                    }
+                    addIndex(json, function (chaptersArr) {
+                        res.send(chaptersArr);
+                    });
+                    return;
+                }
+                case 'remove':
+                {
+                    removeIndex(json, function (chapter) {
+                        res.send(chapter);
+                    });
+                    return;
+                }
             }
         } else {
             clearAllCookies(res)
@@ -349,49 +588,6 @@ app.post('/admin/help-editor/chapter_hierarchy', function (req, res) {
         }
     })
 });
-
-app.post('/admin/help-editor', function (req, res) {
-    console.log(req.body)
-});
-function checkAdmin(req, res, success) {
-    var l = req.cookies.l;  //email
-    var p = req.cookies.p;  //pass
-    var n = req.cookies.n;  //username
-    var role = req.cookies.role;
-    var bean = {role: role};
-
-    postgresQuery(
-        {
-            name: 'check admin login',
-            text: 'select id, name, role from users where email=$1 and pass=$2;',
-            values: [l, p]
-        },
-        function (err, rs) {
-            if (err || rs.length == 0) {
-                res.clearCookie('l');
-                res.clearCookie('i');
-                res.clearCookie('n');
-                res.clearCookie('p');
-                res.clearCookie('role');
-                res.render('index');
-            }
-            else {
-                res.locals.session.auth = true;
-                res.locals.cookies.l = l;
-                res.locals.cookies.p = p;
-//                console.log('checkAdmin:  ',rs[0] );
-                res.locals.cookies.n = rs[0].name;
-                res.locals.cookies.id = rs[0].id;
-                if (rs[0].role == 'admin') {
-                    res.locals.cookies.role = rs[0].role;
-                    success(bean);
-                } else {
-                    to403(req, res);
-                }
-            }
-        });
-
-}
 
 
 app.get('/excercises', function (req, res) {
@@ -426,22 +622,10 @@ app.post('/ex-check', function (req, res) {
         }
     })
 })
-;
-
-
-app.get('/help/:id', function (req, res) {
-    res.render('help_chapter', {chapters: helps, active: req.params.id});
-});
-app.get('/help', function (req, res) {
-
-    res.render('help_index', {helps: helps});
-
-});
-
 
 //login
 app.get('/sign_in', function (req, res) {
-    if (!res.locals.session.auth) {
+    if (!res.locals.session.userid) {
         res.render('sign_in');
     }
     else {
@@ -451,7 +635,7 @@ app.get('/sign_in', function (req, res) {
 
 //register
 app.get('/sign_up', function (req, res) {
-    if (!res.locals.session.auth) {
+    if (!res.locals.session.userid) {
         res.render('sign_up');
     }
     else {
@@ -533,7 +717,7 @@ app.post('/sign-in-controller', function (req, res) {
             if (user.role != null) {
                 res.cookie('role', user.role, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             }
-            res.locals.session.auth = true;
+            res.locals.session.userid = user.id;
 //        res.send(rs);
             res.redirect('/');
 
@@ -553,11 +737,6 @@ app.get('/product/:id', function (req, res) {
     });
 });
 
-app.get('/order/:id', function (req, res) {
-    res.render('order', {
-        cur: req.params.id
-    });
-});
 
 app.get('/register/:key?', function (req, res) {
     var sublink = req.params.key;
@@ -573,7 +752,8 @@ app.get('/register/:key?', function (req, res) {
                 res.cookie('l', rs[0].email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
                 res.cookie('p', rs[0].pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
                 res.cookie('n', rs[0].name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
-                res.locals.session.auth = true;
+                res.locals.session.userid = rs[0].id;
+                res.locals.session.username = rs[0].name;
             }
             res.redirect('/');
         }
@@ -594,36 +774,6 @@ app.get('/env', function (req, res) {
 });
 
 
-/*
- function signIn(req, res) {
- res.send(res.session);
-
- res.render('sign_in');
- }
- app.post('/sign-in-controller', function (req, res) {
- var post = req.body;
- postgresQuery(
- {
- name: 'login user',
- text: 'select name from users where email=$1 and pass=$2;',
- values: [post.email, post.pass]
- },
- function (err, rs) {
- if (err || rs.length == 0) {
- res.render('sign_in', {error: true});
- return;
- }
- res.send(rs);
- res.cookie('l', post.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
- res.cookie('p', post.pass, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
- res.cookie('n', rs[0].name, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
- //        res.redirect('/');
- }
- );
- });
-
-
- */
 http.createServer(app).listen(app.get('port'), function () {
     console.log('Express server listening on port ' + app.get('port'));
 });

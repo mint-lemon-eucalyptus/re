@@ -5,13 +5,23 @@ block content
       .container
         .page-header
           h3 Справочный раздел по Neo4j
-        .row
-          .span10.offset1
-            ul
-            - for(var i=0;i<helps.length;++i){
-              - var ex = helps[i];
-              li
-                 h4
-                    a(href="/help/#{i}")
-                      | #{ex.title}
-            - }
+        .row-fluid
+          .span12.debug
+            .row-fluid.debug
+              .span10.debug
+                  ul
+                        .row-fluid
+                        - var counter=1;
+                        - for(var i in chapters){
+                          ul
+                            .row-fluid
+                              h4
+                                a(href="/help/#{chapters[i].id}")
+                                  | #{counter++}. #{chapters[i].name}
+                        - }
+              .span2.debug
+        .row-fluid
+          .span3.debug
+          .span3.debug
+          .span3.debug
+          .span3.debug
