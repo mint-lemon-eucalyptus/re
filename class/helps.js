@@ -72,6 +72,10 @@ var Helps = function (storage) {
     }
 
     helps.updateChapter = function (ch, callback) {
+        console.log(ch)
+        if(ch.pos===''){
+            ch.pos=null;
+        }
         storage.postgresQuery({
                 name: 'update chapter (name content)',
                 text: 'update help_chapters set name=$2, content=$3, published=$4, pos=$5 where id=$1 returning *;',
@@ -196,6 +200,56 @@ var Helps = function (storage) {
         })
     }
     this.refresh();
+
+
+    this.asSql = function (done) {
+        var a = this.chaptersAdmin;
+        for (var i in a) {
+            console.log('info:  writing', i)
+        }
+
+        var fs = require('fs');
+        var writer = fs.createWriteStream('./sql/helps.sql', {encoding: 'utf-8', flags: 'w'});
+        writer.on('finish', function () {
+            console.error('Запись выполнена успешно.');
+        });
+
+        function write() {
+
+            var res = '';
+
+            for (var i in a) {
+                console.log('writing', i)
+                var text = "insert into help_chapters(id,name,author,content,pos,published) values(" + a[i].id + ',' + "'" + a[i].name + "'," + a[i].author + ",'" + a[i].content + "'," + a[i].pos + ',' + a[i].published + ');';
+
+                res += text;
+            }
+
+            console.log(res.substr(62,70))
+            var ok = writer.write(res);
+
+
+            if (!ok) {
+                console.log('not ok', i)
+
+                return;
+            }
+            writer.on('close', function () {
+                console.log('All done!');
+            });
+
+            writer.end('---==== Конец =====\n');
+
+        }
+
+       // writer.once('drain', write);
+        writer.write('\n');
+       write();
+
+
+        done();
+
+    }
     return this;
 }
 

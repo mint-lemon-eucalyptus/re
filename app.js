@@ -37,6 +37,14 @@ users.get(23, function (user) {
 
 //return;
 mypg.prepareDataBase();
+setTimeout(function(){
+    helps.asSql(function(){
+        return;
+
+    });
+
+},2000)
+
 
 
 /*
