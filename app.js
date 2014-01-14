@@ -24,8 +24,8 @@ var DBUSER = 'auth_user';
 var DBPASS = '12';
 
 
-var COOKIES_EXPIRE_SECS = 10060 * 60;
-var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000 / 70000;
+var COOKIES_EXPIRE_SECS = 10060 * 600;
+var COOKIES_EXPIRE = COOKIES_EXPIRE_SECS * 1000;
 
 var mypg = new MyPG('localhost', DBNAME, DBUSER, DBPASS);
 var helps = new Helps(mypg);
@@ -130,6 +130,11 @@ app.use(express.cookieSession({
     secret: 'secret',
     cookie: {maxAge: COOKIES_EXPIRE}
 }));
+
+console.log({
+    secret: 'secret',
+    cookie: {maxAge: COOKIES_EXPIRE}
+})
 //app.use(express.session({ store: new MemoryStore({ reapInterval: 60000 * 10 }) }));
 //app.use(express.methodOverride());
 
@@ -231,6 +236,7 @@ app.get('/', function (req, res) {
         return;
     }
     if (!l || !p || !n) {
+        console.log('userid / ',res.locals.session.userid);
         users.get(res.locals.session.userid, function (user) {
             res.cookie('i', user.id, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
             res.cookie('l', user.email, { expires: new Date(Date.now() + COOKIES_EXPIRE), path: '/' });
@@ -248,7 +254,7 @@ app.get('/', function (req, res) {
                 res.locals.user = user;
                 res.render('index');
             } else {
-                clearAllCookies(res);
+            //    clearAllCookies(res);
                 res.render('index');
             }
         })
@@ -327,10 +333,11 @@ app.get('/admin', function (req, res) {
     console.log(l, p, userid, req.session.role)
     if (userid) {
         users.admin(userid, l, p, function (user) {
+            console.log(user)
             if (user && user.pass == p && user.email == l) {
                 res.render('admin', {path: 'admin'});
             } else {
-                clearAllCookies(res)
+              //  clearAllCookies(res)
                 res.redirect('403');
             }
         })
@@ -375,12 +382,12 @@ app.post('/admin/chapters', function (req, res) {
                     }
                 }
             } else {
-                clearAllCookies(res)
-                res.send({cmd: 'fuck_you'});
+               // clearAllCookies(res)
+                res.send({cmd: 'not auth'});
             }
         })
     } else {
-        res.send({cmd: 'fuck_you'});
+        res.send({cmd: 'not auth'});
     }
 });
 
@@ -426,7 +433,7 @@ app.post('/user', function (req, res) {
                     }
                 }
             } else {
-                clearAllCookies(res)
+              //  clearAllCookies(res)
                 res.redirect('403');
             }
         })
@@ -482,8 +489,8 @@ app.post('/admin/index', function (req, res) {
                 }
             }
         } else {
-            clearAllCookies(res)
-            res.send({cmd: 'fuck_you'});
+          //  clearAllCookies(res)
+            res.send({cmd: 'not auth'});
         }
     })
 });
@@ -570,7 +577,7 @@ app.post('/sign-up-controller', function (req, res) {
 
                 // setup e-mail data with unicode symbols
                 var mailOptions = {
-                    from: "mint.lemon.eucalyptys@gmail.com", // sender address
+                    from: "mint.lemon.eucalyptus@gmail.com", // sender address
                     to: post.email, // list of receivers
                     subject: "Регистрация для neo4j-ex", // Subject line
                     text: "подтверждение регистрации: ", // plaintext body

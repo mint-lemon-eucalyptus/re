@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 var Helps = function (storage, Cacher, conf) {
     var users = this;
     var usersCache = new Cacher();
@@ -40,6 +42,7 @@ var Helps = function (storage, Cacher, conf) {
     }
     this.admin = function (id, l, p, done) {
         usersCache.get(id, function (err, user) {
+            console.log(user)
             if (!user[id]) {
                 //user is not in the usersCache
                 //attempt to find user in db and put to usersCache
@@ -62,7 +65,7 @@ var Helps = function (storage, Cacher, conf) {
                                 }
                                 //and callback true
 
-                                if (rs[0].role === 'admin' && rs[0].pass === p && rs[0].email === l) {
+                                if (rs[0].role === 'admin') {
                                     done(rs[0]);
                                 } else {
                                     done(null);
@@ -160,8 +163,8 @@ var Helps = function (storage, Cacher, conf) {
                     console.log(new Date() + '\tno admin found');
                     storage.postgresQuery({
                         name: 'register admin',
-                        text: 'Insert INTO users(name, email, pass, confirm, role) values($1, $2, $3, $4, $5);',
-                        values: ['qqq', 'qqq@qqq.ru', 'qqq', null, 'admin']
+                        text: 'Insert INTO users(id,name, email, pass, confirm, role) values($1, $2, $3, $4, $5,$6);',
+                        values: [1,'smois', 'smois77@gmail.com', 'smois', null, 'admin']
                     }, function (err, res) {
                         if (err) {
                             console.log(new Date() + '\tregister error ' + err);
@@ -177,7 +180,59 @@ var Helps = function (storage, Cacher, conf) {
         });
     }
 
+this.signUpUser=function(json,done){
+    postgresQuery(
+        {
+            name: 'register user',
+            text: 'select * from reg_user($1, $2, $3, $4, $5);',
+            values: [post.name, post.email, post.pass, md5, 'user']
+        },
+        function (err, rs) {
+            if (err) {
+                bean = {
+                    reg_email: post.email,
+                    reg_name: post.name,
+                    reg_err: err
+                };
+                res.render('sign_up', bean);
+                console.log(new Date() + '\tregister error');
+                return;
+            } else {
+                res.locals.session.reg_email = post.email;
+                res.locals.session.reg_name = post.name;
 
+                // setup e-mail data with unicode symbols
+                var mailOptions = {
+                    from: "mint.lemon.eucalyptus@gmail.com", // sender address
+                    to: post.email, // list of receivers
+                    subject: "Регистрация для neo4j-ex", // Subject line
+                    text: "подтверждение регистрации: ", // plaintext body
+                    html: "<b>Для подтверждения регистрации " +
+                        'вставьте в адресую строку:   ' + (req.protocol + "://" + req.get('host') + '/register/') + md5
+                }
+
+                var smtpTransport = nodemailer.createTransport("SMTP", {
+                    service: "Gmail",
+                    auth: {
+                        user: "superoot.protech@gmail.com",
+                        pass: "hflbfnjh_nhfdjzlysq"
+                    }
+                });
+
+                smtpTransport.sendMail(mailOptions, function (error, response) {
+                    if (error) {
+                        console.log('SMTP>>:', error, '\n\t\t', post.to);
+                    } else {
+                        console.log("Message sent: " + response.message);
+                    }
+                    smtpTransport.close();
+                });
+                res.redirect('/');
+            }
+        }
+    );
+
+}
     return this;
 }
 

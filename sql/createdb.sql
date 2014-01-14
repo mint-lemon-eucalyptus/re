@@ -1,5 +1,5 @@
-CREATE DATABASE testing;
-
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS help_chapters CASCADE;
 
 DROP ROLE IF EXISTS auth_client;
 CREATE ROLE auth_client;
@@ -20,8 +20,8 @@ CREATE TABLE users
   role    CHARACTER VARYING(10),
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );
-DROP INDEX users_dtm;
-DROP INDEX users_email;
+--DROP INDEX users_dtm;
+--DROP INDEX users_email;
 CREATE UNIQUE INDEX users_email ON users USING BTREE (email COLLATE pg_catalog."default");
 GRANT SELECT, UPDATE, INSERT, DELETE ON users TO auth_client;
 GRANT USAGE ON SEQUENCE users_id_seq TO auth_client;
@@ -49,7 +49,7 @@ RETURNING users.id;
 END
 $$;
 
-DROP TABLE help_chapters;
+DROP TABLE if exists help_chapters cascade;
 CREATE TABLE help_chapters
 (
   id        SERIAL                   NOT NULL,
