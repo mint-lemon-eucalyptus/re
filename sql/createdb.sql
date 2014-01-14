@@ -16,7 +16,8 @@ CREATE TABLE users
   name    CHARACTER VARYING(64),
   email   CHARACTER VARYING(50),
   pass    CHARACTER VARYING(35),
-  confirm CHARACTER VARYING(32),
+  hash    TEXT,
+  confirm TEXT,
   role    CHARACTER VARYING(10),
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );

@@ -260,8 +260,13 @@ app.get('/', function (req, res) {
         })
     }
 });
-
 //stats
+app.get('/user/:id', function (req, res) {
+    var userid = req.session.userid;
+    res.render('user-profile', {chapters: helps.getChaptersForUser()})
+});
+
+
 app.get('/help', function (req, res) {
     var userid = req.session.userid;
     res.render('help_index', {chapters: helps.getChaptersForUser()})

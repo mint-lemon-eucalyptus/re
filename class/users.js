@@ -180,7 +180,13 @@ var Helps = function (storage, Cacher, conf) {
         });
     }
 
-this.signUpUser=function(json,done){
+    function randString(){
+        return Math.random().toString().substring(2,20);
+    }
+this.registerNewUser=function(post,done){
+    var bean = {};
+    var md5 = crypto.createHash('md5').update(post.email + 'aaa' + post.pass).digest("hex");
+    // res.send(md5);
     postgresQuery(
         {
             name: 'register user',
